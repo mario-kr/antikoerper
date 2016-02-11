@@ -1,0 +1,6 @@
+[package]
+name = "antikoerper"
+version = "0.1.0"
+authors = ["Marcel Müller <neikos@neikos.email>"]
+
+[dependencies]
