@@ -17,3 +17,4 @@ It will have two main components:
       themselves add rules. For example you would like to have all your hard
       disks periodically queried for their SMART Data. You will be able to hot
       plug in drives and they will be automatically queried.
+- A Client, sending/giving data based upon agreed rules
