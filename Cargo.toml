@@ -1,6 +1,7 @@
 [package]
+authors = ["Marcel Müller <neikos@neikos.email>"]
 name = "antikoerper"
 version = "0.1.0"
-authors = ["Marcel Müller <neikos@neikos.email>"]
 
 [dependencies]
+hyper = "0.7.2"
