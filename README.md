@@ -9,11 +9,11 @@ projections from this data, use it any way you find useful.
 
 Possible applications:
 
-    - Battery Usage
-    - Analyze your own PC usage (Which programs are focused when your PC is not
-      idle?)
-    - Time spent listening to Music
-    - Anything you can think of!
+- Battery Usage
+- Analyze your own PC usage (Which programs are focused when your PC is not
+idle?)
+- Time spent listening to Music
+- Anything you can think of!
 
 
 Naming
