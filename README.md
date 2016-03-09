@@ -1,6 +1,10 @@
 Antikörper
 ==========
 
+[![Build Status](https://travis-ci.org/anti-koerper/antikoerper.svg?branch=master)](https://travis-ci.org/anti-koerper/antikoerper)
+
+Using [homu](https://homu.io) we assure that we have an evergreen master!
+
 
 Antikörper is meant to be a lightweight data aggregation and visualization tool.
 
