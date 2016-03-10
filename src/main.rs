@@ -13,6 +13,8 @@ extern crate clap;
 #[macro_use] extern crate log;
 extern crate env_logger;
 
+use std::fs::File;
+
 use clap::{Arg, App, SubCommand};
 
 mod conf;
@@ -36,7 +38,7 @@ fn main() {
                          .help("Sets the level of verbosity"))
                     .get_matches();
 
-    let config = matches.value_of("config").unwrap_or("~/.config/");
+    let config_path = matches.value_of("config").unwrap_or("~/.config/antikoerper/config.toml");
 
     let level = match matches.occurrences_of("v") {
         0 => log::LogLevelFilter::Off,
@@ -47,6 +49,20 @@ fn main() {
 
     env_logger::LogBuilder::new().filter(None, level).init().unwrap();
 
-    info!("Config file used: {}", config);
+    info!("Config file used: {}", config_path);
+
+    let mut config_file = {
+        let file = File::open(config_path);
+        match file {
+            Ok(f) => f,
+            Err(e) => {
+                debug!("{}", e);
+                println!("Could not open file '{}': {}", config_path, e);
+                return;
+            }
+        }
+    };
+
+    let config = conf::load(&mut config_file);
 
 }
