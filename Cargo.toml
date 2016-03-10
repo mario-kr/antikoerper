@@ -4,5 +4,8 @@ name = "antikoerper"
 version = "0.1.0"
 
 [dependencies]
+clap = "2.1.2"
+env_logger = "0.3.2"
+log = "0.3.5"
 rustc-serialize = "0.3.18"
 toml = "0.1.27"
