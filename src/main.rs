@@ -84,6 +84,10 @@ on what should be in that file.");
         }
     };
 
-    let config = conf::load(&mut config_file);
+    let config = match conf::load(&mut config_file) {
+        Ok(c) => c,
+        Err(e) => return println!("Error at loading config file ({}): \n{}",
+                                  config_path.display() , e),
+    };
 
 }
