@@ -11,6 +11,7 @@ extern crate rustc_serialize;
 extern crate toml;
 
 mod conf;
+mod item;
 
 fn main() {
 
