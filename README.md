@@ -2,6 +2,7 @@ Antikörper
 ==========
 
 [![Build Status](https://travis-ci.org/anti-koerper/antikoerper.svg?branch=master)](https://travis-ci.org/anti-koerper/antikoerper)
+[![Clippy Linting Result](https://clippy.bashy.io/github/anti-koerper/antikoerper/master/badge.svg)](https://clippy.bashy.io/github/anti-koerper/antikoerper/master/log)
 
 Using [homu](https://homu.io) we assure that we have an evergreen master!
 
