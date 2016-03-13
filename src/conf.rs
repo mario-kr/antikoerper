@@ -8,7 +8,7 @@ use item::Item;
 /// The Configuration of Antikoerper
 #[derive(Debug, Clone)]
 pub struct Config {
-    items: BinaryHeap<Item>,
+    pub items: BinaryHeap<Item>,
 }
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
