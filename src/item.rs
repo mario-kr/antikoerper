@@ -32,8 +32,8 @@ impl ItemError {
             ItemErrorKind::ValueArrayInvalid    => "specified an empty array as command",
             ItemErrorKind::ValueTableMissingKey => "specified a table with missing path and/or args",
             ItemErrorKind::InvalidValueType     => "invalid value type, you may only use tables, strings and arrays",
-            ItemErrorKind::InvalidShellType     => "invalid value type, you may only use a string",
-            ItemErrorKind::InvalidPathType      => "invalid value type, you may only use a string",
+            ItemErrorKind::InvalidShellType
+                | ItemErrorKind::InvalidPathType      => "invalid value type, you may only use a string",
             ItemErrorKind::MultipleSources      => "multiple sources given, you may only use command or file or shell",
             ItemErrorKind::MissingKey           => "missing key field",
         }
@@ -45,12 +45,6 @@ impl ItemError {
         ItemError {
             key: key,
             kind: k,
-        }
-    }
-    fn is_missing_value_section(&self) -> bool {
-        match self.kind {
-            ItemErrorKind::MissingValueSection => true,
-            _ => false
         }
     }
 }
@@ -96,11 +90,11 @@ impl Item {
         };
 
         let command = table.get("command")
-            .ok_or(ItemError::new(key.clone(), ItemErrorKind::MissingValueSection))
+            .ok_or_else(|| ItemError::new(key.clone(), ItemErrorKind::MissingValueSection))
             .and_then(|v| {
                 let path : PathBuf;
                 let args : Vec<String>;
-                if let &toml::Value::Table(ref v) = v {
+                if let toml::Value::Table(ref v) = *v {
                     if let (Some(&toml::Value::String(ref s)), Some(&toml::Value::Array(ref a)))
                                                                  = (v.get("path"), v.get("args")) {
                         path = PathBuf::from(&s);
@@ -116,7 +110,7 @@ impl Item {
                     } else {
                         return Err(ItemError::new(key.clone(), ItemErrorKind::ValueTableMissingKey));
                     }
-                } else if let &toml::Value::Array(ref a) = v {
+                } else if let toml::Value::Array(ref a) = *v {
                     if a.len() < 1 {
                         return Err(ItemError::new(key.clone(), ItemErrorKind::ValueArrayInvalid));
                     }
@@ -128,7 +122,7 @@ impl Item {
                     path = PathBuf::from(strings.pop().unwrap());
                     args = strings;
                     Ok(ItemKind::Command(path, args))
-                } else if let &toml::Value::String(ref s) = v {
+                } else if let toml::Value::String(ref s) = *v {
                     path = PathBuf::from(s);
                     args = Vec::new();
                     Ok(ItemKind::Command(path, args))
@@ -138,9 +132,9 @@ impl Item {
             });
 
         let shell = table.get("shell")
-            .ok_or(ItemError::new(key.clone(), ItemErrorKind::MissingValueSection))
+            .ok_or_else(|| ItemError::new(key.clone(), ItemErrorKind::MissingValueSection))
             .and_then(|v| {
-                if let &toml::Value::String(ref s) = v {
+                if let toml::Value::String(ref s) = *v {
                     Ok(ItemKind::Shell(s.clone()))
                 } else {
                     Err(ItemError::new(key.clone(), ItemErrorKind::InvalidShellType))
@@ -148,9 +142,9 @@ impl Item {
             });
 
         let path = table.get("path")
-            .ok_or(ItemError::new(key.clone(), ItemErrorKind::MissingValueSection))
+            .ok_or_else(|| ItemError::new(key.clone(), ItemErrorKind::MissingValueSection))
             .and_then(|v| {
-                if let &toml::Value::String(ref s) = v {
+                if let toml::Value::String(ref s) = *v {
                     Ok(ItemKind::File(PathBuf::from(s)))
                 } else {
                     Err(ItemError::new(key.clone(), ItemErrorKind::InvalidPathType))
@@ -204,7 +198,7 @@ impl Ord for Item {
         } else {
             return ::std::cmp::Ordering::Less
         }
-        return ::std::cmp::Ordering::Equal
+        ::std::cmp::Ordering::Equal
     }
 }
 
