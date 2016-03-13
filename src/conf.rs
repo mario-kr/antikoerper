@@ -28,8 +28,8 @@ pub struct ConfigError {
 impl ::std::fmt::Display for ConfigError {
     fn fmt(&self, f: &mut ::std::fmt::Formatter) -> Result<(), ::std::fmt::Error> {
         match self.kind {
-            ConfigErrorKind::IoError => self.cause.as_ref().unwrap().fmt(f),
-            ConfigErrorKind::TomlError => self.cause.as_ref().unwrap().fmt(f),
+            ConfigErrorKind::IoError
+                | ConfigErrorKind::TomlError => self.cause.as_ref().unwrap().fmt(f),
             ConfigErrorKind::MissingItems => write!(f, "no items section"),
             ConfigErrorKind::ErrorItems => write!(f, "some items have errors"),
         }
@@ -78,7 +78,7 @@ pub fn load(r: &mut Read) -> Result<Config, ConfigError> {
             cause: None
         })
     }.iter().filter_map(|v| {
-        if let &toml::Value::Table(ref v) = v {
+        if let toml::Value::Table(ref v) = *v {
             Some(Item::from_toml(v))
         } else {
             None
@@ -86,7 +86,7 @@ pub fn load(r: &mut Read) -> Result<Config, ConfigError> {
     }).collect::<Vec<_>>();
 
     for err in items.iter().filter(|x| x.is_err()) {
-        if let &Err(ref x) = err {
+        if let Err(ref x) = *err {
             println!("{}", x);
         }
     }

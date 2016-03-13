@@ -17,7 +17,7 @@ extern crate xdg;
 use std::fs::File;
 use std::path::PathBuf;
 
-use clap::{Arg, App, SubCommand};
+use clap::{Arg, App};
 
 mod conf;
 mod item;
