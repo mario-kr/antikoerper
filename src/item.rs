@@ -203,7 +203,6 @@ impl Ord for Item {
 #[cfg(test)]
 mod tests {
     use std::path::PathBuf;
-    use std::time::Duration;
     use std::collections::BinaryHeap;
 
     use item::{Item,ItemKind};
@@ -212,14 +211,14 @@ mod tests {
     fn items_ordered_by_smallest_time_first() {
         let mut heap = BinaryHeap::new();
         heap.push(Item {
-            next_time: Duration::from_secs(5),
-            interval: Duration::from_secs(5),
+            next_time: 5,
+            interval: 5,
             key: String::from("tests.one"),
             kind: ItemKind::File(PathBuf::from("/dev/null")),
         });
         heap.push(Item {
-            next_time: Duration::from_secs(3),
-            interval: Duration::from_secs(5),
+            next_time: 3,
+            interval: 5,
             key: String::from("tests.two"),
             kind: ItemKind::File(PathBuf::from("/dev/null")),
         });
