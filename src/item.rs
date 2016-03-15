@@ -140,7 +140,7 @@ impl Item {
                 }
             });
 
-        let path = table.get("path")
+        let path = table.get("file")
             .ok_or_else(|| ItemError::new(key.clone(), ItemErrorKind::MissingValueSection))
             .and_then(|v| {
                 if let toml::Value::String(ref s) = *v {
