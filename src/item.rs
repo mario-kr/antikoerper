@@ -1,6 +1,5 @@
 
 use std::path::PathBuf;
-use std::time::Duration;
 use std::error::Error;
 
 use toml;
@@ -8,7 +7,7 @@ use toml;
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 enum ItemErrorKind {
     MissingValueSection,
-    MissingStepSection,
+    MissingIntervalSection,
     ValueArrayInvalid,
     ValueTableMissingKey,
     InvalidValueType,
@@ -28,7 +27,7 @@ impl ItemError {
     fn as_str(&self) -> &str {
         match self.kind {
             ItemErrorKind::MissingValueSection  => "missing 'command', 'shell' or 'file' key",
-            ItemErrorKind::MissingStepSection   => "missing 'step' key",
+            ItemErrorKind::MissingIntervalSection   => "missing 'interval' key",
             ItemErrorKind::ValueArrayInvalid    => "specified an empty array as command",
             ItemErrorKind::ValueTableMissingKey => "specified a table with missing path and/or args",
             ItemErrorKind::InvalidValueType     => "invalid value type, you may only use tables, strings and arrays",
@@ -75,10 +74,10 @@ pub enum ItemKind {
 /// A single item, knowing when it is supposed to run next, what should be done and its key.
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct Item {
-    next_time: Duration,
-    step: Duration,
-    key: String,
-    kind: ItemKind,
+    pub next_time: i64,
+    pub interval: i64,
+    pub key: String,
+    pub kind: ItemKind,
 }
 
 impl Item {
@@ -165,20 +164,19 @@ impl Item {
 
         let kind = try!(sources.into_iter().filter(|x| x.is_ok()).next().unwrap());
 
-        let time = match table.get("step") {
+        let time = match table.get("interval") {
             Some(&toml::Value::Integer(x)) => x,
             _ => {
                 return Err(ItemError {
                     key: key.clone(),
-                    kind: ItemErrorKind::MissingStepSection,
+                    kind: ItemErrorKind::MissingIntervalSection,
                 });
             }
         };
 
-
         Ok(Item {
-            next_time: Duration::new(0, 0),
-            step: Duration::from_secs(time as u64),
+            next_time: 0,
+            interval: time,
             key: key,
             kind: kind,
         })
@@ -215,13 +213,13 @@ mod tests {
         let mut heap = BinaryHeap::new();
         heap.push(Item {
             next_time: Duration::from_secs(5),
-            step: Duration::from_secs(5),
+            interval: Duration::from_secs(5),
             key: String::from("tests.one"),
             kind: ItemKind::File(PathBuf::from("/dev/null")),
         });
         heap.push(Item {
             next_time: Duration::from_secs(3),
-            step: Duration::from_secs(5),
+            interval: Duration::from_secs(5),
             key: String::from("tests.two"),
             kind: ItemKind::File(PathBuf::from("/dev/null")),
         });

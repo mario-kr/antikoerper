@@ -13,6 +13,7 @@ extern crate clap;
 #[macro_use] extern crate log;
 extern crate env_logger;
 extern crate xdg;
+extern crate time;
 
 use std::fs::File;
 use std::path::PathBuf;
@@ -21,6 +22,7 @@ use clap::{Arg, App};
 
 mod conf;
 mod item;
+mod app;
 
 fn main() {
 
@@ -89,5 +91,7 @@ on what should be in that file.");
         Err(e) => return println!("Error at loading config file ({}): \n{}",
                                   config_path.display() , e),
     };
+
+    app::start(config);
 
 }

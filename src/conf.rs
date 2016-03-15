@@ -111,17 +111,16 @@ mod tests {
     fn load() {
         let data = "[[items]]
          key = \"os.uptime\"
-         step = 60
+         interval = 60
          shell = \"cat /proc/uptime | cut -d\' \' -f1\"
 
          [[items]]
          key = \"os.loadavg\"
-         step = 1
+         interval = 1
          shell = \"cat /proc/loadavg | cut -d\' \' -f1\"
 ";
 
         let config = conf::load(&mut data.as_bytes()).unwrap();
         assert_eq!(config.items.len(), 2);
-
     }
 }
