@@ -11,12 +11,13 @@ pub struct Config {
     pub items: BinaryHeap<Item>,
 }
 
-#[derive(Debug, Clone, Copy, Eq, PartialEq)]
+#[derive(Debug, Clone, Eq, PartialEq)]
 enum ConfigErrorKind {
     IoError,
     TomlError,
     MissingItems,
     ErrorItems,
+    DuplicateItem(String),
 }
 
 #[derive(Debug)]
@@ -32,6 +33,7 @@ impl ::std::fmt::Display for ConfigError {
                 | ConfigErrorKind::TomlError => self.cause.as_ref().unwrap().fmt(f),
             ConfigErrorKind::MissingItems => write!(f, "no items section"),
             ConfigErrorKind::ErrorItems => write!(f, "some items have errors"),
+            ConfigErrorKind::DuplicateItem(ref s) => write!(f, "duplicate key: {}", s),
         }
     }
 }
@@ -98,6 +100,19 @@ pub fn load(r: &mut Read) -> Result<Config, ConfigError> {
         });
     }
 
+    let mut it = items.iter().map(|x| x.as_ref().unwrap().key.clone()).collect::<Vec<_>>();
+    it.sort();
+    let mut it = it.windows(2).map(|x| if x[0] == x[1] { Some(x[0].clone()) } else { None })
+        .filter_map(|x| x);
+
+    if let Some(n) = it.next() {
+        return Err(ConfigError {
+            kind: ConfigErrorKind::DuplicateItem(n),
+            cause: None
+        })
+    }
+
+
     Ok(Config {
         items: BinaryHeap::from(items.iter().cloned().map(|x| x.unwrap()).collect::<Vec<_>>())
     })
@@ -122,5 +137,30 @@ mod tests {
 
         let config = conf::load(&mut data.as_bytes()).unwrap();
         assert_eq!(config.items.len(), 2);
+    }
+
+    #[test]
+    fn no_duplicates() {
+        let data = "[[items]]
+         key = \"os.uptime\"
+         interval = 60
+         shell = \"cat /proc/uptime | cut -d\' \' -f1\"
+
+         [[items]]
+         key = \"os.uptime\"
+         interval = 1
+         shell = \"cat /proc/loadavg | cut -d\' \' -f1\"
+";
+
+        let config = conf::load(&mut data.as_bytes());
+        assert!(config.is_err());
+        match config {
+            Err(conf::ConfigError{ kind: conf::ConfigErrorKind::DuplicateItem(n), ..}) => {
+                assert_eq!(n, "os.uptime");
+            },
+            _ => {
+                panic!("Wrong Error!")
+            }
+        }
     }
 }
