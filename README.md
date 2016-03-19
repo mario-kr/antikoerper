@@ -72,6 +72,25 @@ Each item needs to have these keys:
 - `interval`, the interval between two 'runs'
 - `file` OR `shell` OR `command`, only one can be specified.
 
+`command` can have three different values:
+
+- table:
+```toml
+command = {path = "acpi", args = ["-v"]}
+```
+- array:
+```toml
+command = ["acpi", "-v"]
+```
+
+- string
+```toml
+command = "acpi"
+```
+
+*Note that when using the string you cannot use arguments as it is interpreted
+as the path to the executable.*
+
 It can optionally take these:
 - `env`, a map of key = values, to set environment variables
 
