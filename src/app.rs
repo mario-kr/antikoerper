@@ -42,12 +42,22 @@ pub fn start(mut conf: Config) {
                         f.read_to_string(&mut result).unwrap();
                     }
                     ItemKind::Command(ref path, ref args) => {
-                        let output = Command::new(path).args(args).output().unwrap();
+                        let mut output = Command::new(path);
+                        output.args(args);
+                        for (k,v) in clone.env {
+                            output.env(k, v);
+                        }
+                        let output = output.output().unwrap();
                         result = String::from_utf8(output.stdout).unwrap();
                     }
                     ItemKind::Shell(ref command) => {
-                        let output = Command::new(shell).arg("-c").arg(command)
-                            .output().unwrap();
+                        let mut output = Command::new(shell);
+                        output.arg("-c");
+                        output.arg(command);
+                        for (k,v) in clone.env {
+                            output.env(k, v);
+                        }
+                        let output = output.output().unwrap();
                         result = String::from_utf8(output.stdout).unwrap();
                     }
                 }
