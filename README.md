@@ -75,6 +75,14 @@ Each item needs to have these keys:
 It can optionally take these:
 - `env`, a map of key = values, to set environment variables
 
+Output
+------
+
+The output of Antikörper is to append to files that are named like the keys one
+specified. The output directory is per default `XDG_DATA_HOME`, or if that is
+not set `$HOME/.local/share`. You can also override it with the `--output` flag
+when running Antikörper.
+
 # LICENSE
 
 This program is free software: you can redistribute it and/or modify
