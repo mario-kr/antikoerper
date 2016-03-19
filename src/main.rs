@@ -39,7 +39,7 @@ fn main() {
                     .arg(Arg::with_name("output")
                          .short("o")
                          .long("output")
-                         .value_name("FILE")
+                         .value_name("DIRECTORY")
                          .help("Set the output path")
                          .takes_value(true))
                     .arg(Arg::with_name("v")
