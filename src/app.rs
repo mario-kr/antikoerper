@@ -14,8 +14,9 @@ pub fn start(mut conf: Config) {
 
     loop {
         loop {
+            let cur_time = get_time().sec;
             if let Some(c) = conf.items.peek() {
-                if c.next_time > get_time().sec {
+                if c.next_time > cur_time {
                     break;
                 }
             } else {
@@ -25,7 +26,7 @@ pub fn start(mut conf: Config) {
 
             let mut item = conf.items.pop().unwrap();
             let clone = item.clone();
-            item.next_time = get_time().sec + item.interval;
+            item.next_time = cur_time + item.interval;
             conf.items.push(item);
 
             let mut shell = String::new();
@@ -65,8 +66,10 @@ pub fn start(mut conf: Config) {
                 }
                 debug!("{}={}", clone.key, result);
                 output_folder.push(clone.key);
-                match OpenOptions::new().append(true).open(output_folder)
-                    .and_then(|mut file| file.write(&result.as_bytes()[..]))
+                match OpenOptions::new().append(true).create(true).open(output_folder)
+                    .and_then(|mut file| {
+                        file.write(&format!("{} {}", cur_time, &result).as_bytes()[..])
+                    })
                     {
                         Ok(_) => (),
                         Err(e) => {

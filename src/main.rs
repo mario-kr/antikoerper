@@ -25,9 +25,6 @@ mod item;
 mod app;
 
 fn main() {
-
-    let xdg_dirs = xdg::BaseDirectories::with_prefix("antikoerper").unwrap();
-
     let matches = App::new("Antikörper")
                     .version(env!("CARGO_PKG_VERSION"))
                     .author("Neikos <neikos@neikos.email>")
@@ -51,11 +48,25 @@ fn main() {
                          .help("Sets the level of verbosity"))
                     .get_matches();
 
+    trace!("Getting XDG Base directories");
+    let xdg_dirs = xdg::BaseDirectories::with_prefix("antikoerper").unwrap();
+
+    let level = match matches.occurrences_of("v") {
+        0 => log::LogLevelFilter::Off,
+        1 => log::LogLevelFilter::Warn,
+        2 => log::LogLevelFilter::Debug,
+        3 | _ => log::LogLevelFilter::Trace,
+    };
+
+    env_logger::LogBuilder::new().filter(None, level).init().unwrap();
+
+    trace!("Matching for config value");
     let config_path = matches.value_of("config").and_then(|s| {
         Some(PathBuf::from(s))
     }).or_else(|| {
         xdg_dirs.find_config_file("config.toml")
     });
+    trace!("Value is: {:#?}", config_path);
 
     let config_path = match config_path {
         Some(x) => x,
@@ -69,6 +80,7 @@ on what should be in that file.");
         }
     };
 
+    trace!("Matching for output value");
     let data_path = matches.value_of("output").and_then(|s| {
         Some(PathBuf::from(s))
     }).or_else(|| {
@@ -83,15 +95,7 @@ on what should be in that file.");
             return;
         }
     };
-
-    let level = match matches.occurrences_of("v") {
-        0 => log::LogLevelFilter::Off,
-        1 => log::LogLevelFilter::Warn,
-        2 => log::LogLevelFilter::Debug,
-        3 | _ => log::LogLevelFilter::Trace,
-    };
-
-    env_logger::LogBuilder::new().filter(None, level).init().unwrap();
+    trace!("Output path is: {:#?}", data_path);
 
     info!("Config file used: {}", &config_path.display());
 
