@@ -1,7 +1,11 @@
 [package]
 authors = ["Marcel Müller <neikos@neikos.email>"]
 name = "antikoerper"
-version = "0.1.0"
+version = "0.2.0"
+licence = "GPL-3.0"
+homepage = "https://github.com/anti-koerper/antikoerper"
+keywords = ["monitoring", "lightweight", "fast"]
+description = "A lightweight and simple to use local monitoring application"
 
 [dependencies]
 clap = "2.1.2"
