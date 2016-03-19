@@ -1,6 +1,7 @@
 
 use std::path::PathBuf;
 use std::error::Error;
+use std::collections::BTreeMap;
 
 use toml;
 
@@ -79,6 +80,7 @@ pub struct Item {
     pub next_time: i64,
     pub interval: i64,
     pub key: String,
+    pub env: BTreeMap<String, String>,
     pub kind: ItemKind,
 }
 
@@ -152,6 +154,20 @@ impl Item {
                 }
             });
 
+        let env = match table.get("env") {
+            Some(&toml::Value::Table(ref x)) => {
+                x.iter().map(|(k, v)| (k.clone(), v.as_str()))
+                    .filter(|&(_, v)| v.is_some())
+                    .map(|(k,v)| (k, v.unwrap().into()))
+                    .collect::<BTreeMap<String, String>>()
+            }
+            _ => {
+                BTreeMap::new()
+            }
+        };
+
+        debug!("Got this env: {:#?}", env);
+
         let sources = vec![command, shell, path];
 
         {
@@ -187,6 +203,7 @@ impl Item {
             interval: time,
             key: key,
             kind: kind,
+            env: env,
         })
     }
 }
