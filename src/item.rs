@@ -229,6 +229,7 @@ impl Ord for Item {
 mod tests {
     use std::path::PathBuf;
     use std::collections::BinaryHeap;
+    use std::collections::BTreeMap;
 
     use item::{Item,ItemKind};
 
@@ -238,12 +239,14 @@ mod tests {
         heap.push(Item {
             next_time: 5,
             interval: 5,
+            env: BTreeMap::new(),
             key: String::from("tests.one"),
             kind: ItemKind::File(PathBuf::from("/dev/null")),
         });
         heap.push(Item {
             next_time: 3,
             interval: 5,
+            env: BTreeMap::new(),
             key: String::from("tests.two"),
             kind: ItemKind::File(PathBuf::from("/dev/null")),
         });
