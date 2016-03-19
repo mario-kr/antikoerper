@@ -92,13 +92,13 @@ pub fn load(r: &mut Read, o: PathBuf) -> Result<Config, ConfigError> {
                         kind: ConfigErrorKind::MismatchedShellType,
                         cause: None,
                     }),
-                    _ => String::from("/usr/bin/shell"),
+                    _ => String::from("/usr/bin/sh"),
                 },
             }
         }
         _ => {
             General {
-                shell: String::from("/usr/bin/shell"),
+                shell: String::from("/usr/bin/sh"),
             }
         }
     };
