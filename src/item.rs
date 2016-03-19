@@ -15,6 +15,7 @@ enum ItemErrorKind {
     InvalidPathType,
     MultipleSources,
     MissingKey,
+    InvalidInterval,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
@@ -35,6 +36,7 @@ impl ItemError {
                 | ItemErrorKind::InvalidPathType      => "invalid value type, you may only use a string",
             ItemErrorKind::MultipleSources      => "multiple sources given, you may only use command or file or shell",
             ItemErrorKind::MissingKey           => "missing key field",
+            ItemErrorKind::InvalidInterval      => "interval has to be bigger than 0 and smaller than MAX_INT64",
         }
     }
 }
@@ -165,6 +167,12 @@ impl Item {
         let kind = try!(sources.into_iter().filter(|x| x.is_ok()).next().unwrap());
 
         let time = match table.get("interval") {
+            Some(&toml::Value::Integer(x)) if x <= 0 => {
+                return Err(ItemError {
+                    key: key.clone(),
+                    kind: ItemErrorKind::InvalidInterval,
+                });
+            },
             Some(&toml::Value::Integer(x)) => x,
             _ => {
                 return Err(ItemError {
