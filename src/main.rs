@@ -39,6 +39,12 @@ fn main() {
                          .value_name("FILE")
                          .help("Sets a custom config file")
                          .takes_value(true))
+                    .arg(Arg::with_name("output")
+                         .short("o")
+                         .long("output")
+                         .value_name("FILE")
+                         .help("Set the output path")
+                         .takes_value(true))
                     .arg(Arg::with_name("v")
                          .short("v")
                          .multiple(true)
@@ -59,6 +65,21 @@ fn main() {
             println!("");
             println!("Check out https://github.com/anti-koerper/antikoerper for details
 on what should be in that file.");
+            return;
+        }
+    };
+
+    let data_path = matches.value_of("output").and_then(|s| {
+        Some(PathBuf::from(s))
+    }).or_else(|| {
+        Some(PathBuf::new())
+    }).unwrap();
+
+    let data_path = match xdg_dirs.create_data_directory(&data_path) {
+        Ok(s) => s,
+        Err(e) => {
+            println!("Could not create path: {}", config_path.display());
+            println!("Error was: {}", e);
             return;
         }
     };
@@ -86,7 +107,7 @@ on what should be in that file.");
         }
     };
 
-    let config = match conf::load(&mut config_file) {
+    let config = match conf::load(&mut config_file, data_path) {
         Ok(c) => c,
         Err(e) => return println!("Error at loading config file ({}): \n{}",
                                   config_path.display() , e),

@@ -1,9 +1,9 @@
 
 use std::thread;
 use std::time::Duration;
-use std::fs::File;
+use std::fs::{File, OpenOptions};
 use std::process::Command;
-use std::io::Read;
+use std::io::{Read, Write};
 
 use conf::Config;
 use time::get_time;
@@ -29,6 +29,8 @@ pub fn start(mut conf: Config) {
             conf.items.push(item);
 
             let mut shell = String::new();
+
+            let mut output_folder = conf.output.clone();
 
             if let ItemKind::Shell(_) = clone.kind {
                 shell = conf.general.shell.clone();
@@ -61,7 +63,16 @@ pub fn start(mut conf: Config) {
                         result = String::from_utf8(output.stdout).unwrap();
                     }
                 }
-                println!("{}={}", clone.key, result);
+                debug!("{}={}", clone.key, result);
+                output_folder.push(clone.key);
+                match OpenOptions::new().append(true).open(output_folder)
+                    .and_then(|mut file| file.write(&result.as_bytes()[..]))
+                    {
+                        Ok(_) => (),
+                        Err(e) => {
+                            debug!("{}", e)
+                        }
+                    }
             });
         }
         if let Some(c) = conf.items.peek() {

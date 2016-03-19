@@ -1,6 +1,7 @@
 
 use std::collections::BinaryHeap;
 use std::io::Read;
+use std::path::PathBuf;
 
 use toml;
 use item::Item;
@@ -10,6 +11,7 @@ use item::Item;
 pub struct Config {
     pub items: BinaryHeap<Item>,
     pub general: General,
+    pub output: PathBuf,
 }
 
 #[derive(Debug, Clone)]
@@ -64,7 +66,7 @@ impl From<toml::ParserError> for ConfigError {
     }
 }
 
-pub fn load(r: &mut Read) -> Result<Config, ConfigError> {
+pub fn load(r: &mut Read, o: PathBuf) -> Result<Config, ConfigError> {
     let content = {
         let mut buffer = String::new();
         try!(r.read_to_string(&mut buffer));
@@ -144,6 +146,7 @@ pub fn load(r: &mut Read) -> Result<Config, ConfigError> {
     Ok(Config {
         items: BinaryHeap::from(items.iter().cloned().map(|x| x.unwrap()).collect::<Vec<_>>()),
         general: general,
+        output: o,
     })
 }
 
@@ -164,7 +167,7 @@ mod tests {
          shell = \"cat /proc/loadavg | cut -d\' \' -f1\"
 ";
 
-        let config = conf::load(&mut data.as_bytes()).unwrap();
+        let config = conf::load(&mut data.as_bytes(), PathBuf::from("")).unwrap();
         assert_eq!(config.items.len(), 2);
     }
 
@@ -181,7 +184,7 @@ mod tests {
          shell = \"cat /proc/loadavg | cut -d\' \' -f1\"
 ";
 
-        let config = conf::load(&mut data.as_bytes());
+        let config = conf::load(&mut data.as_bytes(), PathBuf::from(""));
         assert!(config.is_err());
         match config {
             Err(conf::ConfigError{ kind: conf::ConfigErrorKind::DuplicateItem(n), ..}) => {
