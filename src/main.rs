@@ -81,11 +81,10 @@ on what should be in that file.");
     };
 
     trace!("Matching for output value");
-    let data_path = matches.value_of("output").and_then(|s| {
-        Some(PathBuf::from(s))
-    }).or_else(|| {
-        Some(PathBuf::new())
-    }).unwrap();
+    let data_path = match matches.value_of("output") {
+        Some(s) => PathBuf::from(s),
+        None => PathBuf::new(),
+    };
 
     let data_path = match xdg_dirs.create_data_directory(&data_path) {
         Ok(s) => s,
