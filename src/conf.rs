@@ -9,6 +9,12 @@ use item::Item;
 #[derive(Debug, Clone)]
 pub struct Config {
     pub items: BinaryHeap<Item>,
+    pub general: General,
+}
+
+#[derive(Debug, Clone)]
+pub struct General {
+    pub shell: String,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
@@ -18,6 +24,7 @@ enum ConfigErrorKind {
     MissingItems,
     ErrorItems,
     DuplicateItem(String),
+    MismatchedShellType,
 }
 
 #[derive(Debug)]
@@ -34,6 +41,7 @@ impl ::std::fmt::Display for ConfigError {
             ConfigErrorKind::MissingItems => write!(f, "no items section"),
             ConfigErrorKind::ErrorItems => write!(f, "some items have errors"),
             ConfigErrorKind::DuplicateItem(ref s) => write!(f, "duplicate key: {}", s),
+            ConfigErrorKind::MismatchedShellType => write!(f, "general.shell has to be a string")
         }
     }
 }
@@ -72,6 +80,26 @@ pub fn load(r: &mut Read) -> Result<Config, ConfigError> {
     };
 
     debug!("{:#?}", parsed);
+
+    let general = match parsed.get("general") {
+        Some(&toml::Value::Table(ref v)) => {
+            General {
+                shell: match v.get("shell") {
+                    Some(&toml::Value::String(ref s)) => s.clone(),
+                    Some(_) => return Err(ConfigError {
+                        kind: ConfigErrorKind::MismatchedShellType,
+                        cause: None,
+                    }),
+                    _ => String::from("/usr/bin/shell"),
+                },
+            }
+        }
+        _ => {
+            General {
+                shell: String::from("/usr/bin/shell"),
+            }
+        }
+    };
 
     let items = match parsed.get("items") {
         Some(&toml::Value::Array(ref t)) => t,
@@ -114,7 +142,8 @@ pub fn load(r: &mut Read) -> Result<Config, ConfigError> {
 
 
     Ok(Config {
-        items: BinaryHeap::from(items.iter().cloned().map(|x| x.unwrap()).collect::<Vec<_>>())
+        items: BinaryHeap::from(items.iter().cloned().map(|x| x.unwrap()).collect::<Vec<_>>()),
+        general: general,
     })
 }
 
