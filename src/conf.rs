@@ -92,13 +92,13 @@ pub fn load(r: &mut Read, o: PathBuf) -> Result<Config, ConfigError> {
                         kind: ConfigErrorKind::MismatchedShellType,
                         cause: None,
                     }),
-                    _ => String::from("/usr/bin/shell"),
+                    _ => String::from("/usr/bin/sh"),
                 },
             }
         }
         _ => {
             General {
-                shell: String::from("/usr/bin/shell"),
+                shell: String::from("/usr/bin/sh"),
             }
         }
     };
@@ -126,7 +126,7 @@ pub fn load(r: &mut Read, o: PathBuf) -> Result<Config, ConfigError> {
     if items.iter().filter(|x| x.is_err()).count() > 0 {
         return Err(ConfigError {
             kind: ConfigErrorKind::ErrorItems,
-            cause: Some(Box::new(items.iter().filter(|x| x.is_err()).next().unwrap().clone().err().unwrap()))
+            cause: Some(Box::new(items.iter().filter_map(|x| x.clone().err()).next().unwrap()))
         });
     }
 

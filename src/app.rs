@@ -41,8 +41,14 @@ pub fn start(mut conf: Config) {
                 let mut result = String::new();
                 match clone.kind {
                     ItemKind::File(ref path) => {
-                        let mut f = File::open(path).unwrap();
-                        f.read_to_string(&mut result).unwrap();
+                        let mut f = match File::open(path) {
+                            Ok(f) => f,
+                            Err(e) => return error!("Could not open file: {}\n{}", path.display(), e),
+                        };
+                        match f.read_to_string(&mut result) {
+                            Ok(_) => (),
+                            Err(e) => return error!("Could read output from file: {},\n{}", path.display(), e),
+                        }
                     }
                     ItemKind::Command(ref path, ref args) => {
                         let mut output = Command::new(path);
@@ -50,8 +56,14 @@ pub fn start(mut conf: Config) {
                         for (k,v) in clone.env {
                             output.env(k, v);
                         }
-                        let output = output.output().unwrap();
-                        result = String::from_utf8(output.stdout).unwrap();
+                        let output = match output.output() {
+                            Ok(f) => f,
+                            Err(e) => return error!("Could not run command: {}\n{}", path.display(), e)
+                        };
+                        result = match String::from_utf8(output.stdout) {
+                            Ok(r) => r,
+                            Err(e) => return error!("Could not read output from command: {}\n{}", path.display(), e)
+                        }
                     }
                     ItemKind::Shell(ref command) => {
                         let mut output = Command::new(shell);
@@ -60,20 +72,26 @@ pub fn start(mut conf: Config) {
                         for (k,v) in clone.env {
                             output.env(k, v);
                         }
-                        let output = output.output().unwrap();
-                        result = String::from_utf8(output.stdout).unwrap();
+                        let output = match output.output() {
+                            Ok(f) => f,
+                            Err(e) => return error!("Could not run shell command: {}\n{}", command, e)
+                        };
+                        result = match String::from_utf8(output.stdout) {
+                            Ok(r) => r,
+                            Err(e) => return error!("Could not read output from shell command: {}\n{}", command, e)
+                        }
                     }
                 }
                 debug!("{}={}", clone.key, result);
                 output_folder.push(clone.key);
-                match OpenOptions::new().append(true).create(true).open(output_folder)
+                match OpenOptions::new().append(true).create(true).open(&output_folder)
                     .and_then(|mut file| {
                         file.write(&format!("{} {}", cur_time, &result).as_bytes()[..])
                     })
                     {
                         Ok(_) => (),
                         Err(e) => {
-                            debug!("{}", e)
+                            error!("Error creating file {}, {}", output_folder.display(), e)
                         }
                     }
             });
