@@ -152,6 +152,8 @@ pub fn load(r: &mut Read, o: PathBuf) -> Result<Config, ConfigError> {
 
 #[cfg(test)]
 mod tests {
+    use std::path::PathBuf;
+
     use conf;
 
     #[test]
