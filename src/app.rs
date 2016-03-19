@@ -28,6 +28,12 @@ pub fn start(mut conf: Config) {
             item.next_time = get_time().sec + item.interval;
             conf.items.push(item);
 
+            let mut shell = String::new();
+
+            if let ItemKind::Shell(_) = clone.kind {
+                shell = conf.general.shell.clone();
+            }
+
             thread::spawn(move || {
                 let mut result = String::new();
                 match clone.kind {
@@ -40,7 +46,7 @@ pub fn start(mut conf: Config) {
                         result = String::from_utf8(output.stdout).unwrap();
                     }
                     ItemKind::Shell(ref command) => {
-                        let output = Command::new("/usr/bin/sh").arg("-c").arg(command)
+                        let output = Command::new(shell).arg("-c").arg(command)
                             .output().unwrap();
                         result = String::from_utf8(output.stdout).unwrap();
                     }
