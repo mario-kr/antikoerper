@@ -71,7 +71,7 @@ pub fn load(r: &mut Read) -> Result<Config, ConfigError> {
         return Err(ConfigError::from(parser.errors[0].clone()));
     };
 
-    println!("{:#?}", parsed);
+    debug!("{:#?}", parsed);
 
     let items = match parsed.get("items") {
         Some(&toml::Value::Array(ref t)) => t,
