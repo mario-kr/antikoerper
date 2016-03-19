@@ -2,7 +2,7 @@
 authors = ["Marcel Müller <neikos@neikos.email>"]
 name = "antikoerper"
 version = "0.2.0"
-licence = "GPL-3.0"
+license = "GPL-3.0"
 homepage = "https://github.com/anti-koerper/antikoerper"
 keywords = ["monitoring", "lightweight", "fast"]
 description = "A lightweight and simple to use local monitoring application"
