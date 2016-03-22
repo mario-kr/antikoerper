@@ -84,7 +84,7 @@ pub fn start(mut conf: Config) {
                 }
                 debug!("{}={}", clone.key, result);
                 output_folder.push(clone.key);
-                match OpenOptions::new().append(true).create(true).open(&output_folder)
+                match OpenOptions::new().write(true).append(true).create(true).open(&output_folder)
                     .and_then(|mut file| {
                         file.write(&format!("{} {}", cur_time, &result).as_bytes()[..])
                     })
