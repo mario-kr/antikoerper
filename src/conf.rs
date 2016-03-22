@@ -1,3 +1,4 @@
+extern crate xdg;
 
 use std::collections::BinaryHeap;
 use std::io::Read;
@@ -17,6 +18,7 @@ pub struct Config {
 #[derive(Debug, Clone)]
 pub struct General {
     pub shell: String,
+    pub output: String,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
@@ -94,14 +96,47 @@ pub fn load(r: &mut Read, o: PathBuf) -> Result<Config, ConfigError> {
                     }),
                     _ => String::from("/usr/bin/sh"),
                 },
+                output: match v.get("output") {
+                    Some(&toml::Value::String(ref s)) => s.clone(),
+                    Some(_) => return Err(ConfigError {
+                        kind: ConfigErrorKind::MismatchedShellType,
+                        cause: None,
+                    }),
+                    _ => String::from(""),
+                },
             }
         }
         _ => {
             General {
                 shell: String::from("/usr/bin/sh"),
+                output: String::from(""),
             }
         }
     };
+
+    // output file given to load function (which gets it from the argument) -> use this one
+    // output file given in config-file -> use this one
+    // output file not given anywhere -> use the default
+    let ret_output : PathBuf;
+    if o == PathBuf::new() && general.output != "" {
+        ret_output = PathBuf::from(general.output.clone());
+    } else {
+        ret_output = o.clone();
+    }
+    let xdg_dirs = xdg::BaseDirectories::with_prefix("antikoerper").unwrap();
+    let ret_output = match xdg_dirs.create_data_directory(&ret_output) {
+        Ok(s) => s,
+        Err(e) => {
+            println!("Could not create path");
+            println!("Error was: {}", e);
+            return Err(ConfigError {
+                kind: ConfigErrorKind::IoError,
+                cause: None
+            })
+        }
+    };
+
+    trace!("Output path is: {:#?}", ret_output);
 
     let items = match parsed.get("items") {
         Some(&toml::Value::Array(ref t)) => t,
@@ -146,7 +181,7 @@ pub fn load(r: &mut Read, o: PathBuf) -> Result<Config, ConfigError> {
     Ok(Config {
         items: BinaryHeap::from(items.iter().cloned().map(|x| x.unwrap()).collect::<Vec<_>>()),
         general: general,
-        output: o,
+        output: ret_output,
     })
 }
 
