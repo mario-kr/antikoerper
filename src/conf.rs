@@ -187,6 +187,8 @@ pub fn load(r: &mut Read, o: PathBuf) -> Result<Config, ConfigError> {
 
 #[cfg(test)]
 mod tests {
+    extern crate xdg;
+
     use std::path::PathBuf;
 
     use conf;
@@ -231,5 +233,42 @@ mod tests {
                 panic!("Wrong Error!")
             }
         }
+    }
+
+    #[test]
+    fn output_dir() {
+        let data = "[general]
+        output = \"/tmp/test\"
+        [[items]]
+        key = \"os.battery\"
+        interval = 60
+        shell = \"acpi\"
+        ";
+        // Testcase 1: output-dir supplied by config file only
+        let config = conf::load(&mut data.as_bytes(), PathBuf::new()).unwrap();
+        assert_eq!(config.output, PathBuf::from("/tmp/test"));
+
+        // Testcase 2: output-dir supplied by config, but also with commandline-argument
+        // argument should override config
+        let config = conf::load(&mut data.as_bytes(), PathBuf::from("/tmp/cmd_test")).unwrap();
+        assert_eq!(config.output, PathBuf::from("/tmp/cmd_test"));
+
+        // Testcase 3: Not output given, default should be used
+        let data = "[general]
+        [[items]]
+        key = \"os.battery\"
+        interval = 60
+        shell = \"acpi\"
+        ";
+        let config = conf::load(&mut data.as_bytes(), PathBuf::new()).unwrap();
+        let xdg_default_dir = match xdg::BaseDirectories::with_prefix("antikoerper").unwrap()
+            .create_data_directory(&PathBuf::new()) {
+                Ok(s) => s,
+                Err(e) => {
+                    println!("Error: {}", e);
+                    return;
+                }
+            };
+        assert_eq!(config.output, xdg_default_dir);
     }
 }
