@@ -12,13 +12,12 @@ use item::Item;
 pub struct Config {
     pub items: BinaryHeap<Item>,
     pub general: General,
-    pub output: PathBuf,
 }
 
 #[derive(Debug, Clone)]
 pub struct General {
     pub shell: String,
-    pub output: String,
+    pub output: PathBuf,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
@@ -87,7 +86,7 @@ pub fn load(r: &mut Read, o: PathBuf) -> Result<Config, ConfigError> {
 
     debug!("{:#?}", parsed);
 
-    let general = match parsed.get("general") {
+    let mut general = match parsed.get("general") {
         Some(&toml::Value::Table(ref v)) => {
             General {
                 shell: match v.get("shell") {
@@ -98,47 +97,41 @@ pub fn load(r: &mut Read, o: PathBuf) -> Result<Config, ConfigError> {
                     }),
                     _ => String::from("/usr/bin/sh"),
                 },
-                output: match v.get("output") {
-                    Some(&toml::Value::String(ref s)) => s.clone(),
-                    Some(_) => return Err(ConfigError {
-                        kind: ConfigErrorKind::OutputType,
-                        cause: None,
-                    }),
-                    _ => String::from(""),
+                output: if o == PathBuf::new() {
+                    match v.get("output") {
+                        Some(&toml::Value::String(ref s)) => PathBuf::from(s.clone()),
+                        Some(_) => return Err(ConfigError {
+                            kind: ConfigErrorKind::OutputType,
+                            cause: None,
+                        }),
+                        _ => o.clone(),
+                    }
+                } else {
+                    o
                 },
             }
         }
         _ => {
             General {
                 shell: String::from("/usr/bin/sh"),
-                output: String::from(""),
+                output: o,
             }
         }
     };
 
-    // output file given to load function (which gets it from the argument) -> use this one
-    // output file given in config-file -> use this one
-    // output file not given anywhere -> use the default
-    let ret_output : PathBuf;
-    if o == PathBuf::new() && general.output != "" {
-        ret_output = PathBuf::from(general.output.clone());
-    } else {
-        ret_output = o.clone();
-    }
-    let xdg_dirs = xdg::BaseDirectories::with_prefix("antikoerper").unwrap();
-    let ret_output = match xdg_dirs.create_data_directory(&ret_output) {
+    general.output = match xdg::BaseDirectories::with_prefix("antikoerper").unwrap()
+    .create_data_directory(&general.output) {
         Ok(s) => s,
         Err(e) => {
-            println!("Could not create path");
-            println!("Error was: {}", e);
+            println!("Error while checking/creating path");
+            println!("Error: {}", e);
             return Err(ConfigError {
-                kind: ConfigErrorKind::IoError,
-                cause: None
-            })
+                kind: ConfigErrorKind::OutputType,
+                cause: None,
+        });
         }
     };
-
-    trace!("Output path is: {:#?}", ret_output);
+    trace!("Output path is: {:#?}", general.output);
 
     let items = match parsed.get("items") {
         Some(&toml::Value::Array(ref t)) => t,
@@ -183,7 +176,6 @@ pub fn load(r: &mut Read, o: PathBuf) -> Result<Config, ConfigError> {
     Ok(Config {
         items: BinaryHeap::from(items.iter().cloned().map(|x| x.unwrap()).collect::<Vec<_>>()),
         general: general,
-        output: ret_output,
     })
 }
 
@@ -248,12 +240,12 @@ mod tests {
         ";
         // Testcase 1: output-dir supplied by config file only
         let config = conf::load(&mut data.as_bytes(), PathBuf::new()).unwrap();
-        assert_eq!(config.output, PathBuf::from("/tmp/test"));
+        assert_eq!(config.general.output, PathBuf::from("/tmp/test"));
 
         // Testcase 2: output-dir supplied by config, but also with commandline-argument
         // argument should override config
         let config = conf::load(&mut data.as_bytes(), PathBuf::from("/tmp/cmd_test")).unwrap();
-        assert_eq!(config.output, PathBuf::from("/tmp/cmd_test"));
+        assert_eq!(config.general.output, PathBuf::from("/tmp/cmd_test"));
 
         // Testcase 3: Not output given, default should be used
         let data = "[general]
@@ -271,6 +263,6 @@ mod tests {
                     return;
                 }
             };
-        assert_eq!(config.output, xdg_default_dir);
+        assert_eq!(config.general.output, xdg_default_dir);
     }
 }
