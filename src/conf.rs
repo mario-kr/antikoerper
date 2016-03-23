@@ -86,7 +86,7 @@ pub fn load(r: &mut Read, o: PathBuf) -> Result<Config, ConfigError> {
 
     debug!("{:#?}", parsed);
 
-    let mut general = match parsed.get("general") {
+    let general = match parsed.get("general") {
         Some(&toml::Value::Table(ref v)) => {
             General {
                 shell: match v.get("shell") {
@@ -97,23 +97,40 @@ pub fn load(r: &mut Read, o: PathBuf) -> Result<Config, ConfigError> {
                     }),
                     _ => String::from("/usr/bin/sh"),
                 },
-                // only if o is not set via commandline-argument, will we try to parse it.
-                output: if o == PathBuf::new() {
-                    match v.get("output") {
-                        Some(&toml::Value::String(ref s)) => PathBuf::from(s.clone()),
-                        Some(_) => return Err(ConfigError {
-                            kind: ConfigErrorKind::MismatchedOutputType,
-                            cause: None,
-                        }),
-                        // if it is not given either way, we just use the empty one
-                        _ => o.clone(),
+                // The function create_data_directory creates relative paths as subdirectories
+                // to XDG_DATA_HOME/antikoerper/.
+                // If the given path is absolute, the path will be overwritten, no usage of the
+                // XDG environment variables in this case
+                // If this functions returns successfully, the path in general.output definitely exists.
+                output : match xdg::BaseDirectories::with_prefix("antikoerper").unwrap()
+                    .create_data_directory(if o == PathBuf::new() {
+                        match v.get("output") {
+                            Some(&toml::Value::String(ref s)) => PathBuf::from(s.clone()),
+                            Some(_) => return Err(ConfigError {
+                                kind: ConfigErrorKind::MismatchedOutputType,
+                                cause: None,
+                            }),
+                            // if it is not given either way, we just use the empty one
+                            _ => o.clone(),
+                        }
+                    } else {
+                         // using the one provided with commandline argument
+                         o
+                    },)
+                    {
+                        Ok(s) => s,
+                        Err(e) => {
+                            println!("Error while checking/creating path");
+                            println!("Error: {}", e);
+                            return Err(ConfigError {
+                                kind: ConfigErrorKind::IoError,
+                                cause: None,
+                            });
+                        }
                     }
-                } else {
-                    // using the one provided with commandline argument
-                    o
-                },
             }
-        }
+        },
+
         _ => {
             General {
                 shell: String::from("/usr/bin/sh"),
@@ -122,23 +139,6 @@ pub fn load(r: &mut Read, o: PathBuf) -> Result<Config, ConfigError> {
         }
     };
 
-    // The function create_data_directory creates relative paths as subdirectories
-    // to XDG_DATA_HOME/antikoerper/.
-    // If the given path is absolute, the path will be overwritten, no usage of the
-    // XDG environment variables in this case
-    // If this functions returns successfully, the path in general.output definitely exists.
-    general.output = match xdg::BaseDirectories::with_prefix("antikoerper").unwrap()
-    .create_data_directory(&general.output) {
-        Ok(s) => s,
-        Err(e) => {
-            println!("Error while checking/creating path");
-            println!("Error: {}", e);
-            return Err(ConfigError {
-                kind: ConfigErrorKind::IoError,
-                cause: None,
-        });
-        }
-    };
     trace!("Output path is: {:#?}", general.output);
 
     let items = match parsed.get("items") {
