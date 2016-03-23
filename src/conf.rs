@@ -28,7 +28,7 @@ enum ConfigErrorKind {
     ErrorItems,
     DuplicateItem(String),
     MismatchedShellType,
-    OutputType,
+    MismatchedOutputType,
 }
 
 #[derive(Debug)]
@@ -46,7 +46,7 @@ impl ::std::fmt::Display for ConfigError {
             ConfigErrorKind::ErrorItems => write!(f, "some items have errors"),
             ConfigErrorKind::DuplicateItem(ref s) => write!(f, "duplicate key: {}", s),
             ConfigErrorKind::MismatchedShellType => write!(f, "general.shell has to be a string"),
-            ConfigErrorKind::OutputType => write!(f, "general.output has to be a path")
+            ConfigErrorKind::MismatchedOutputType => write!(f, "general.output has to be a path")
         }
     }
 }
@@ -102,7 +102,7 @@ pub fn load(r: &mut Read, o: PathBuf) -> Result<Config, ConfigError> {
                     match v.get("output") {
                         Some(&toml::Value::String(ref s)) => PathBuf::from(s.clone()),
                         Some(_) => return Err(ConfigError {
-                            kind: ConfigErrorKind::OutputType,
+                            kind: ConfigErrorKind::MismatchedOutputType,
                             cause: None,
                         }),
                         // if it is not given either way, we just use the empty one
