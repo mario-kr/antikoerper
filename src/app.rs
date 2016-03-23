@@ -31,7 +31,7 @@ pub fn start(mut conf: Config) {
 
             let mut shell = String::new();
 
-            let mut output_folder = conf.output.clone();
+            let mut output_folder = conf.general.output.clone();
 
             if let ItemKind::Shell(_) = clone.kind {
                 shell = conf.general.shell.clone();
