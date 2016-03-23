@@ -86,16 +86,6 @@ on what should be in that file.");
         None => PathBuf::new(),
     };
 
-    let data_path = match xdg_dirs.create_data_directory(&data_path) {
-        Ok(s) => s,
-        Err(e) => {
-            println!("Could not create path: {}", config_path.display());
-            println!("Error was: {}", e);
-            return;
-        }
-    };
-    trace!("Output path is: {:#?}", data_path);
-
     info!("Config file used: {}", &config_path.display());
 
     let mut config_file = {

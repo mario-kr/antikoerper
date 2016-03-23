@@ -39,6 +39,7 @@ A sample config with all options used:
 ```toml
 [general]
 shell = "/usr/bin/bash"
+output = "/tmp/antikoerper"
 
 [[items]]
 key = "os.battery"
@@ -61,6 +62,7 @@ file = "/sys/class/backlight/intel_backlight/actual_brightness"
 
 - `shell`, the default shell is `/usr/bin/sh`. If you want to use another one,
   specify it here.
+- `output`, Defines the output directory.
 
 ### Section `items`
 
@@ -99,8 +101,11 @@ Output
 
 The output of Antikörper is to append to files that are named like the keys one
 specified. The output directory is per default `XDG_DATA_HOME`, or if that is
-not set `$HOME/.local/share`. You can also override it with the `--output` flag
-when running Antikörper.
+not set `$HOME/.local/share`. You can also override it with 'output' in the
+'general' section of the configuration file, or override the default as well as
+the configuration with the commandline option '--output'.
+Please note that giving a relative path with either the commandline option or the
+configuration file will result in a subdirectory of `XDG_DATA_HOME/antikoerper/`.
 
 # LICENSE
 
