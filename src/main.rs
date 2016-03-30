@@ -99,7 +99,7 @@ on what should be in that file.");
         let mut child = process::Command::new(std::env::args().next().unwrap());
         let args = env::args().skip(1).filter(|a| a != "--daemonize" && a != "-d")
             .collect::<Vec<_>>();
-        child.args(&args);
+        child.args(&args).stdin(process::Stdio::null()).stdout(process::Stdio::null()).stderr(process::Stdio::null());
         match child.spawn() {
             Ok(_) => debug!("Successfully daemonized"),
             Err(e) => debug!("Failed daemonizing the process {:#?}", e),
