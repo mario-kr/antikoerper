@@ -172,12 +172,12 @@ mod tests {
         let data = "[[items]]
          key = \"os.uptime\"
          interval = 60
-         shell = \"cat /proc/uptime | cut -d\' \' -f1\"
+         command = \"cat /proc/uptime | cut -d\' \' -f1\"
 
          [[items]]
          key = \"os.loadavg\"
          interval = 1
-         shell = \"cat /proc/loadavg | cut -d\' \' -f1\"
+         command = \"cat /proc/loadavg | cut -d\' \' -f1\"
 ";
 
         let config = conf::load(&mut data.as_bytes(), PathBuf::from("")).unwrap();
@@ -189,12 +189,12 @@ mod tests {
         let data = "[[items]]
          key = \"os.uptime\"
          interval = 60
-         shell = \"cat /proc/uptime | cut -d\' \' -f1\"
+         command = \"cat /proc/uptime | cut -d\' \' -f1\"
 
          [[items]]
          key = \"os.uptime\"
          interval = 1
-         shell = \"cat /proc/loadavg | cut -d\' \' -f1\"
+         command = \"cat /proc/loadavg | cut -d\' \' -f1\"
 ";
 
         let config = conf::load(&mut data.as_bytes(), PathBuf::from(""));
@@ -216,7 +216,7 @@ mod tests {
         [[items]]
         key = \"os.battery\"
         interval = 60
-        shell = \"acpi\"
+        command = \"acpi\"
         ";
         // Testcase 1: output-dir supplied by config file only
         let config = conf::load(&mut data.as_bytes(), PathBuf::new()).unwrap();
@@ -232,7 +232,7 @@ mod tests {
         [[items]]
         key = \"os.battery\"
         interval = 60
-        shell = \"acpi\"
+        command = \"acpi\"
         ";
         let config = conf::load(&mut data.as_bytes(), PathBuf::new()).unwrap();
         let xdg_default_dir = match xdg::BaseDirectories::with_prefix("antikoerper").unwrap()
