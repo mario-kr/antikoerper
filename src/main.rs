@@ -7,13 +7,15 @@
 
 //! Antikoerper is a simple and lightweight data aggregation and visualization tool
 
-extern crate rustc_serialize;
+extern crate serde;
+#[macro_use] extern crate serde_derive;
 extern crate toml;
 extern crate clap;
 #[macro_use] extern crate log;
 extern crate env_logger;
 extern crate xdg;
 extern crate time;
+extern crate itertools;
 
 use std::fs::File;
 use std::path::PathBuf;
