@@ -217,11 +217,12 @@ impl PartialOrd for Item {
 impl Ord for Item {
     fn cmp(&self, other: &Self) -> ::std::cmp::Ordering {
         if self.next_time < other.next_time {
-            return ::std::cmp::Ordering::Greater
+            ::std::cmp::Ordering::Greater
+        } else if self.next_time == other.next_time {
+            ::std::cmp::Ordering::Equal
         } else {
-            return ::std::cmp::Ordering::Less
+            ::std::cmp::Ordering::Less
         }
-        ::std::cmp::Ordering::Equal
     }
 }
 
