@@ -76,6 +76,16 @@ pub struct Item {
 
     #[serde(rename = "input")]
     pub kind: ItemKind,
+
+    pub mappers: Vec<Mapper>,
+}
+
+#[derive(Debug, Clone, Eq, PartialEq, PartialOrd, Deserialize)]
+pub enum Mapper {
+    Regex {
+        regex: String, // `regex::Regex` does not yet support Deserialize unfortunately
+    },
+    // Maybe later more?
 }
 
 fn next_time_default() -> i64 {
