@@ -169,7 +169,9 @@ mod tests {
 
     #[test]
     fn load() {
-        let data = "[[items]]
+        let data = "[general]
+         output = \"/tmp/test\"
+         [[items]]
          key = \"os.uptime\"
          interval = 60
          command = \"cat /proc/uptime | cut -d\' \' -f1\"
@@ -186,7 +188,9 @@ mod tests {
 
     #[test]
     fn no_duplicates() {
-        let data = "[[items]]
+        let data = "[general]
+         output = \"/tmp/test\"
+         [[items]]
          key = \"os.uptime\"
          interval = 60
          command = \"cat /proc/uptime | cut -d\' \' -f1\"
