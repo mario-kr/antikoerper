@@ -15,7 +15,7 @@ pub fn start(mut conf: Config) {
     loop {
         loop {
             let cur_time = get_time().sec;
-            if let Some(c) = conf.items.peek() {
+            if let Some(c) = conf.items.iter().peekable().peek() {
                 if c.next_time > cur_time {
                     break;
                 }
@@ -96,7 +96,7 @@ pub fn start(mut conf: Config) {
                     }
             });
         }
-        if let Some(c) = conf.items.peek() {
+        if let Some(c) = conf.items.iter().peekable().peek() {
             thread::sleep(Duration::from_secs((c.next_time - get_time().sec) as u64));
         }
     }

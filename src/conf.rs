@@ -1,34 +1,21 @@
 extern crate xdg;
 
-use std::collections::BinaryHeap;
 use std::io::Read;
 use std::path::PathBuf;
 
-use toml;
+use itertools::Itertools;
+
 use item::Item;
-
-/// The Configuration of Antikoerper
-#[derive(Debug, Clone)]
-pub struct Config {
-    pub items: BinaryHeap<Item>,
-    pub general: General,
-}
-
-#[derive(Debug, Clone)]
-pub struct General {
-    pub shell: String,
-    pub output: PathBuf,
-}
+use item::ItemError;
+use item::ItemErrorKind;
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 enum ConfigErrorKind {
     IoError,
     TomlError,
-    MissingItems,
     ErrorItems,
     DuplicateItem(String),
-    MismatchedShellType,
-    MismatchedOutputType,
+    Utf8Error,
 }
 
 #[derive(Debug)]
@@ -42,11 +29,9 @@ impl ::std::fmt::Display for ConfigError {
         match self.kind {
             ConfigErrorKind::IoError
                 | ConfigErrorKind::TomlError => self.cause.as_ref().unwrap().fmt(f),
-            ConfigErrorKind::MissingItems => write!(f, "no items section"),
             ConfigErrorKind::ErrorItems => write!(f, "some items have errors"),
             ConfigErrorKind::DuplicateItem(ref s) => write!(f, "duplicate key: {}", s),
-            ConfigErrorKind::MismatchedShellType => write!(f, "general.shell has to be a string"),
-            ConfigErrorKind::MismatchedOutputType => write!(f, "general.output has to be a path")
+            ConfigErrorKind::Utf8Error => write!(f, "utf8 error")
         }
     }
 }
@@ -60,8 +45,8 @@ impl From<::std::io::Error> for ConfigError {
     }
 }
 
-impl From<toml::ParserError> for ConfigError {
-    fn from(e: toml::ParserError) -> Self {
+impl From<::toml::de::Error> for ConfigError {
+    fn from(e: ::toml::de::Error) -> Self {
         ConfigError {
             kind: ConfigErrorKind::TomlError,
             cause: Some(Box::new(e)),
@@ -69,122 +54,109 @@ impl From<toml::ParserError> for ConfigError {
     }
 }
 
+impl From<::std::string::FromUtf8Error> for ConfigError {
+    fn from(e: ::std::string::FromUtf8Error) -> Self {
+        ConfigError {
+            kind: ConfigErrorKind::Utf8Error,
+            cause: Some(Box::new(e)),
+        }
+    }
+}
+
+impl From<ItemError> for ConfigError {
+    fn from(e: ItemError) -> Self {
+        ConfigError {
+            kind: ConfigErrorKind::ErrorItems,
+            cause: Some(Box::new(e)),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct Config {
+    pub general: General,
+    pub items: Vec<Item>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct General {
+    #[serde(default = "shell_default")]
+    pub shell  : String,
+
+    #[serde(default = "output_default")]
+    pub output : PathBuf,
+}
+
+fn shell_default() -> String {
+    String::from("/usr/bin/sh")
+}
+
+fn output_default() -> PathBuf {
+    xdg::BaseDirectories::with_prefix("antikoerper")
+        .unwrap()
+        .create_data_directory(&PathBuf::new())
+        .unwrap_or_else(|e| {
+            println!("Error: {}", e);
+            ::std::process::exit(1)
+        })
+}
+
 pub fn load(r: &mut Read, o: PathBuf) -> Result<Config, ConfigError> {
     let content = {
         let mut buffer = String::new();
-        try!(r.read_to_string(&mut buffer));
+        r.read_to_string(&mut buffer)?;
         buffer
     };
 
+    let mut data: Config = ::toml::de::from_str(&content)
+        .map_err(ConfigError::from)?;
 
-    let mut parser = toml::Parser::new(&content);
-    let parsed = if let Some(t) = parser.parse() {
-        t
-    } else {
-        return Err(ConfigError::from(parser.errors[0].clone()));
-    };
+    debug!("{:#?}", data);
 
-    debug!("{:#?}", parsed);
-
-    let general = match parsed.get("general") {
-        Some(&toml::Value::Table(ref v)) => {
-            General {
-                shell: match v.get("shell") {
-                    Some(&toml::Value::String(ref s)) => s.clone(),
-                    Some(_) => return Err(ConfigError {
-                        kind: ConfigErrorKind::MismatchedShellType,
-                        cause: None,
-                    }),
-                    _ => String::from("/usr/bin/sh"),
-                },
-                // The function create_data_directory creates relative paths as subdirectories
-                // to XDG_DATA_HOME/antikoerper/.
-                // If the given path is absolute, the path will be overwritten, no usage of the
-                // XDG environment variables in this case
-                // If this functions returns successfully, the path in general.output definitely exists.
-                output : match xdg::BaseDirectories::with_prefix("antikoerper").unwrap()
-                    .create_data_directory(if o == PathBuf::new() {
-                        match v.get("output") {
-                            Some(&toml::Value::String(ref s)) => PathBuf::from(s.clone()),
-                            Some(_) => return Err(ConfigError {
-                                kind: ConfigErrorKind::MismatchedOutputType,
-                                cause: None,
-                            }),
-                            // if it is not given either way, we just use the empty one
-                            _ => o.clone(),
-                        }
-                    } else {
-                         // using the one provided with commandline argument
-                         o
-                    },)
-                    {
-                        Ok(s) => s,
-                        Err(e) => {
-                            println!("Error while checking/creating path");
-                            println!("Error: {}", e);
-                            return Err(ConfigError {
-                                kind: ConfigErrorKind::IoError,
-                                cause: None,
-                            });
-                        }
-                    }
-            }
-        },
-
-        _ => {
-            General {
-                shell: String::from("/usr/bin/sh"),
-                output: o,
-            }
-        }
-    };
-
-    trace!("Output path is: {:#?}", general.output);
-
-    let items = match parsed.get("items") {
-        Some(&toml::Value::Array(ref t)) => t,
-        _ => return Err(ConfigError {
-            kind: ConfigErrorKind::MissingItems,
-            cause: None
+    data.general.output = xdg::BaseDirectories::with_prefix("antikoerper")
+        .unwrap()
+        .create_data_directory(if o == PathBuf::new() {
+            data.general.output
+        } else {
+             // using the one provided with commandline argument
+             o
         })
-    }.iter().filter_map(|v| {
-        if let toml::Value::Table(ref v) = *v {
-            Some(Item::from_toml(v))
+        .map_err(|e| {
+            println!("Error while checking/creating path");
+            println!("Error: {}", e);
+            ConfigError { kind: ConfigErrorKind::IoError, cause: None }
+        })?;
+
+    trace!("Output path is: {:#?}", data.general.output);
+
+    if let Some(err) = data.items
+        .iter()
+        .map(|x| x.key.clone())
+        .sorted()
+        .windows(2)
+        .filter_map(|x| if x[0] == x[1] {
+            Some(x[0].clone())
         } else {
             None
-        }
-    }).collect::<Vec<_>>();
-
-    for err in items.iter().filter(|x| x.is_err()) {
-        if let Err(ref x) = *err {
-            println!("{}", x);
-        }
-    }
-
-    if items.iter().filter(|x| x.is_err()).count() > 0 {
-        return Err(ConfigError {
-            kind: ConfigErrorKind::ErrorItems,
-            cause: Some(Box::new(items.iter().filter_map(|x| x.clone().err()).next().unwrap()))
-        });
-    }
-
-    let mut it = items.iter().map(|x| x.as_ref().unwrap().key.clone()).collect::<Vec<_>>();
-    it.sort();
-    let mut it = it.windows(2).map(|x| if x[0] == x[1] { Some(x[0].clone()) } else { None })
-        .filter_map(|x| x);
-
-    if let Some(n) = it.next() {
-        return Err(ConfigError {
-            kind: ConfigErrorKind::DuplicateItem(n),
-            cause: None
         })
+        .next()
+        .map(|n| Err(ConfigError { kind: ConfigErrorKind::DuplicateItem(n), cause: None }))
+    {
+        return err
     }
 
+    if let Some(err) = data.items
+        .iter()
+        .filter_map(|i| if i.interval == 0 {
+            Some(Err(ItemError::new(i.key.clone(), ItemErrorKind::InvalidInterval)))
+        } else {
+            None
+        }).next()
+    {
+        return err.map_err(ConfigError::from)
+    }
 
-    Ok(Config {
-        items: BinaryHeap::from(items.iter().cloned().map(|x| x.unwrap()).collect::<Vec<_>>()),
-        general: general,
-    })
+    Ok(data)
 }
 
 #[cfg(test)]

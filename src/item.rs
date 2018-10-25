@@ -3,19 +3,8 @@ use std::path::PathBuf;
 use std::error::Error;
 use std::collections::BTreeMap;
 
-use toml;
-
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
-enum ItemErrorKind {
-    MissingValueSection,
-    MissingIntervalSection,
-    ValueArrayInvalid,
-    ValueTableMissingKey,
-    InvalidValueType,
-    InvalidShellType,
-    InvalidPathType,
-    MultipleSources,
-    MissingKey,
+pub enum ItemErrorKind {
     InvalidInterval,
 }
 
@@ -28,22 +17,13 @@ pub struct ItemError {
 impl ItemError {
     fn as_str(&self) -> &str {
         match self.kind {
-            ItemErrorKind::MissingValueSection  => "missing 'command', 'shell' or 'file' key",
-            ItemErrorKind::MissingIntervalSection   => "missing 'interval' key",
-            ItemErrorKind::ValueArrayInvalid    => "specified an empty array as command",
-            ItemErrorKind::ValueTableMissingKey => "specified a table with missing path and/or args",
-            ItemErrorKind::InvalidValueType     => "invalid value type, you may only use tables, strings and arrays",
-            ItemErrorKind::InvalidShellType
-                | ItemErrorKind::InvalidPathType      => "invalid value type, you may only use a string",
-            ItemErrorKind::MultipleSources      => "multiple sources given, you may only use command or file or shell",
-            ItemErrorKind::MissingKey           => "missing key field",
             ItemErrorKind::InvalidInterval      => "interval has to be bigger than 0 and smaller than MAX_INT64",
         }
     }
 }
 
 impl ItemError {
-    fn new(key: String ,k: ItemErrorKind) -> ItemError {
+    pub fn new(key: String ,k: ItemErrorKind) -> ItemError {
         ItemError {
             key: key,
             kind: k,
@@ -64,7 +44,8 @@ impl ::std::fmt::Display for ItemError {
 }
 
 /// The different kinds of items one can supervise
-#[derive(Debug, Clone, Eq, PartialEq, PartialOrd)]
+#[derive(Debug, Clone, Eq, PartialEq, PartialOrd, Deserialize)]
+#[serde(untagged)]
 pub enum ItemKind {
     /// Read the file at the given location, useful on Linux for the /sys dir for example
     File(PathBuf),
@@ -75,137 +56,22 @@ pub enum ItemKind {
 }
 
 /// A single item, knowing when it is supposed to run next, what should be done and its key.
-#[derive(Debug, Clone, Eq, PartialEq)]
+#[derive(Debug, Clone, Eq, PartialEq, Deserialize)]
 pub struct Item {
+    #[serde(skip, default = "next_time_default")]
     pub next_time: i64,
     pub interval: i64,
     pub key: String,
+
+    #[serde(skip, default = "BTreeMap::new")]
     pub env: BTreeMap<String, String>,
+
+    #[serde(rename = "command")]
     pub kind: ItemKind,
 }
 
-impl Item {
-    pub fn from_toml(table: &toml::Table) -> Result<Item, ItemError> {
-
-        let key = match table.get("key") {
-            Some(&toml::Value::String(ref s)) => s.clone(),
-            _ => return Err(ItemError::new(String::from(""), ItemErrorKind::MissingKey))
-        };
-
-        let command = table.get("command")
-            .ok_or_else(|| ItemError::new(key.clone(), ItemErrorKind::MissingValueSection))
-            .and_then(|v| {
-                let path : PathBuf;
-                let args : Vec<String>;
-                if let toml::Value::Table(ref v) = *v {
-                    if let (Some(&toml::Value::String(ref s)), Some(&toml::Value::Array(ref a)))
-                                                                 = (v.get("path"), v.get("args")) {
-                        path = PathBuf::from(&s);
-                        args = {
-                            if a.iter().map(|x| x.as_str()).all(|x| x.is_some()) {
-                                a.iter().map(|x| x.as_str()).map(|x| x.unwrap().into()).collect()
-                            } else {
-                                return Err(ItemError::new(key.clone(), ItemErrorKind::ValueArrayInvalid));
-                            }
-                        };
-
-                        Ok(ItemKind::Command(path, args))
-                    } else {
-                        return Err(ItemError::new(key.clone(), ItemErrorKind::ValueTableMissingKey));
-                    }
-                } else if let toml::Value::Array(ref a) = *v {
-                    if a.len() < 1 {
-                        return Err(ItemError::new(key.clone(), ItemErrorKind::ValueArrayInvalid));
-                    }
-                    let mut iter = a.iter().map(|x| x.as_str());
-                    if !iter.all(|x| x.is_some()) {
-                        return Err(ItemError::new(key.clone(), ItemErrorKind::ValueArrayInvalid));
-                    }
-                    let mut strings = iter.map(|x| x.unwrap().into()).collect::<Vec<String>>();
-                    path = PathBuf::from(strings.pop().unwrap());
-                    args = strings;
-                    Ok(ItemKind::Command(path, args))
-                } else if let toml::Value::String(ref s) = *v {
-                    path = PathBuf::from(s);
-                    args = Vec::new();
-                    Ok(ItemKind::Command(path, args))
-                } else {
-                    return Err(ItemError::new(key.clone(), ItemErrorKind::InvalidValueType));
-                }
-            });
-
-        let shell = table.get("shell")
-            .ok_or_else(|| ItemError::new(key.clone(), ItemErrorKind::MissingValueSection))
-            .and_then(|v| {
-                if let toml::Value::String(ref s) = *v {
-                    Ok(ItemKind::Shell(s.clone()))
-                } else {
-                    Err(ItemError::new(key.clone(), ItemErrorKind::InvalidShellType))
-                }
-            });
-
-        let path = table.get("file")
-            .ok_or_else(|| ItemError::new(key.clone(), ItemErrorKind::MissingValueSection))
-            .and_then(|v| {
-                if let toml::Value::String(ref s) = *v {
-                    Ok(ItemKind::File(PathBuf::from(s)))
-                } else {
-                    Err(ItemError::new(key.clone(), ItemErrorKind::InvalidPathType))
-                }
-            });
-
-        let env = match table.get("env") {
-            Some(&toml::Value::Table(ref x)) => {
-                x.iter().map(|(k, v)| (k.clone(), v.as_str()))
-                    .filter(|&(_, v)| v.is_some())
-                    .map(|(k,v)| (k, v.unwrap().into()))
-                    .collect::<BTreeMap<String, String>>()
-            }
-            _ => {
-                BTreeMap::new()
-            }
-        };
-
-        debug!("Got this env: {:#?}", env);
-
-        let sources = vec![command, shell, path];
-
-        {
-            if sources.iter().all(|x| x.is_err()) {
-                return Err(ItemError::new(key.clone(), ItemErrorKind::MissingValueSection));
-            }
-
-            if sources.iter().filter(|x| x.is_ok()).count() > 2 {
-                return Err(ItemError::new(key.clone(), ItemErrorKind::MultipleSources));
-            }
-        }
-
-        let kind = try!(sources.into_iter().filter(|x| x.is_ok()).next().unwrap());
-
-        let time = match table.get("interval") {
-            Some(&toml::Value::Integer(x)) if x <= 0 => {
-                return Err(ItemError {
-                    key: key.clone(),
-                    kind: ItemErrorKind::InvalidInterval,
-                });
-            },
-            Some(&toml::Value::Integer(x)) => x,
-            _ => {
-                return Err(ItemError {
-                    key: key.clone(),
-                    kind: ItemErrorKind::MissingIntervalSection,
-                });
-            }
-        };
-
-        Ok(Item {
-            next_time: 0,
-            interval: time,
-            key: key,
-            kind: kind,
-            env: env,
-        })
-    }
+fn next_time_default() -> i64 {
+    0
 }
 
 impl PartialOrd for Item {
