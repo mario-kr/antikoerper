@@ -208,7 +208,7 @@ mod tests {
                 assert_eq!(n, "os.uptime");
             },
             _ => {
-                panic!("Wrong Error!")
+                panic!("Wrong Error!: {:?}", config)
             }
         }
     }
@@ -247,6 +247,7 @@ mod tests {
                     return;
                 }
             };
-        assert_eq!(config.general.output, xdg_default_dir);
+        assert_eq!(config.general.output, xdg_default_dir,
+                   "Expected {:?} to be {:?}", config.general.output, xdg_default_dir);
     }
 }
