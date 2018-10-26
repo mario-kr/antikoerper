@@ -64,7 +64,7 @@ pub enum ItemKind {
 }
 
 /// A single item, knowing when it is supposed to run next, what should be done and its key.
-#[derive(Debug, Clone, Eq, PartialEq, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct Item {
     #[serde(skip, default = "next_time_default")]
     pub next_time: i64,
@@ -80,7 +80,7 @@ pub struct Item {
     pub mappers: Vec<Mapper>,
 }
 
-#[derive(Debug, Clone, Eq, PartialEq, PartialOrd, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 pub enum Mapper {
     Regex {
         regex: String, // `regex::Regex` does not yet support Deserialize unfortunately
@@ -92,28 +92,9 @@ fn next_time_default() -> i64 {
     0
 }
 
-impl PartialOrd for Item {
-    fn partial_cmp(&self, other: &Self) -> Option<::std::cmp::Ordering> {
-        Some(self.cmp(other))
-    }
-}
-
-impl Ord for Item {
-    fn cmp(&self, other: &Self) -> ::std::cmp::Ordering {
-        if self.next_time < other.next_time {
-            ::std::cmp::Ordering::Greater
-        } else if self.next_time == other.next_time {
-            ::std::cmp::Ordering::Equal
-        } else {
-            ::std::cmp::Ordering::Less
-        }
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use std::path::PathBuf;
-    use std::collections::BinaryHeap;
     use std::collections::BTreeMap;
 
     use toml;
@@ -122,13 +103,14 @@ mod tests {
 
     #[test]
     fn items_ordered_by_smallest_time_first() {
-        let mut heap = BinaryHeap::new();
+        let mut heap = Vec::new();
         heap.push(Item {
             next_time: 5,
             interval: 5,
             env: BTreeMap::new(),
             key: String::from("tests.one"),
             kind: ItemKind::File{ path: PathBuf::from("/dev/null") },
+            mappers: vec![],
         });
         heap.push(Item {
             next_time: 3,
@@ -136,6 +118,7 @@ mod tests {
             env: BTreeMap::new(),
             key: String::from("tests.two"),
             kind: ItemKind::File{ path: PathBuf::from("/dev/null") },
+            mappers: vec![],
         });
 
         if let Some(item) = heap.pop() {
