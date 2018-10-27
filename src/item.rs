@@ -45,14 +45,21 @@ impl ::std::fmt::Display for ItemError {
 
 /// The different kinds of items one can supervise
 #[derive(Debug, Clone, Eq, PartialEq, PartialOrd, Deserialize)]
-#[serde(untagged)]
+#[serde(tag = "type", rename_all = "lowercase")]
 pub enum ItemKind {
     /// Read the file at the given location, useful on Linux for the /sys dir for example
-    File(PathBuf),
+    File {
+        path: PathBuf
+    },
     /// Path to an executable with a list of arguments to be given to the executable
-    Command(PathBuf, Vec<String>),
+    Command {
+        path: PathBuf,
+        args: Vec<String>
+    },
     /// A string to be executed in a shell context
-    Shell(String),
+    Shell {
+        script: String
+    },
 }
 
 /// A single item, knowing when it is supposed to run next, what should be done and its key.
@@ -66,7 +73,7 @@ pub struct Item {
     #[serde(skip, default = "BTreeMap::new")]
     pub env: BTreeMap<String, String>,
 
-    #[serde(rename = "command")]
+    #[serde(rename = "input")]
     pub kind: ItemKind,
 }
 
