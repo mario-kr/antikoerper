@@ -33,14 +33,14 @@ pub fn start(mut conf: Config) {
 
             let mut output_folder = conf.general.output.clone();
 
-            if let ItemKind::Shell(_) = clone.kind {
+            if let ItemKind::Shell{script: _} = clone.kind {
                 shell = conf.general.shell.clone();
             }
 
             thread::spawn(move || {
                 let mut result = String::new();
                 match clone.kind {
-                    ItemKind::File(ref path) => {
+                    ItemKind::File{ref path} => {
                         let mut f = match File::open(path) {
                             Ok(f) => f,
                             Err(e) => return error!("Could not open file: {}\n{}", path.display(), e),
@@ -50,7 +50,7 @@ pub fn start(mut conf: Config) {
                             Err(e) => return error!("Could read output from file: {},\n{}", path.display(), e),
                         }
                     }
-                    ItemKind::Command(ref path, ref args) => {
+                    ItemKind::Command{ref path, ref args} => {
                         let mut output = Command::new(path);
                         output.args(args);
                         for (k,v) in clone.env {
@@ -65,20 +65,20 @@ pub fn start(mut conf: Config) {
                             Err(e) => return error!("Could not read output from command: {}\n{}", path.display(), e)
                         }
                     }
-                    ItemKind::Shell(ref command) => {
-                        let mut output = Command::new(shell);
+                    ItemKind::Shell{ref script} => {
+                        let mut output = Command::new(&shell);
                         output.arg("-c");
-                        output.arg(command);
+                        output.arg(script);
                         for (k,v) in clone.env {
                             output.env(k, v);
                         }
                         let output = match output.output() {
                             Ok(f) => f,
-                            Err(e) => return error!("Could not run shell command: {}\n{}", command, e)
+                            Err(e) => return error!("Could not run shell script: {}\n{}", script, e)
                         };
                         result = match String::from_utf8(output.stdout) {
                             Ok(r) => r,
-                            Err(e) => return error!("Could not read output from shell command: {}\n{}", command, e)
+                            Err(e) => return error!("Could not read output from shell script: {}\n{}", script, e)
                         }
                     }
                 }
