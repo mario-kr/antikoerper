@@ -71,7 +71,7 @@ pub struct Item {
     pub interval: i64,
     pub key: String,
 
-    #[serde(skip, default = "BTreeMap::new")]
+    #[serde(default)]
     pub env: BTreeMap<String, String>,
 
     #[serde(rename = "input")]
