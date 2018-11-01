@@ -169,18 +169,21 @@ mod tests {
 
     #[test]
     fn load() {
-        let data = "[general]
-         output = \"/tmp/test\"
-         [[items]]
-         key = \"os.uptime\"
-         interval = 60
-         command = \"cat /proc/uptime | cut -d\' \' -f1\"
+        let data = r#"[general]
+         output = "/tmp/test"
 
          [[items]]
-         key = \"os.loadavg\"
+         key = "os.uptime"
+         interval = 60
+         input.type = "shell"
+         input.script = "cat /proc/uptime | cut -d' ' -f1"
+
+         [[items]]
+         key = "os.loadavg"
          interval = 1
-         command = \"cat /proc/loadavg | cut -d\' \' -f1\"
-";
+         input.type = "shell"
+         input.script = "cat /proc/loadavg | cut -d' ' -f1"
+"#;
 
         let config = conf::load(&mut data.as_bytes(), PathBuf::from("")).unwrap();
         assert_eq!(config.items.len(), 2);
@@ -188,18 +191,20 @@ mod tests {
 
     #[test]
     fn no_duplicates() {
-        let data = "[general]
-         output = \"/tmp/test\"
+        let data = r#"[general]
+         output = "/tmp/test"
          [[items]]
-         key = \"os.uptime\"
+         key = "os.uptime"
          interval = 60
-         command = \"cat /proc/uptime | cut -d\' \' -f1\"
+         input.type = "shell"
+         input.script = "cat /proc/uptime | cut -d' ' -f1"
 
          [[items]]
-         key = \"os.uptime\"
+         key = "os.uptime"
          interval = 1
-         command = \"cat /proc/loadavg | cut -d\' \' -f1\"
-";
+         input.type = "shell"
+         input.script = "cat /proc/loadavg | cut -d' ' -f1"
+"#;
 
         let config = conf::load(&mut data.as_bytes(), PathBuf::from(""));
         assert!(config.is_err());
@@ -215,13 +220,14 @@ mod tests {
 
     #[test]
     fn output_dir() {
-        let data = "[general]
-        output = \"/tmp/test\"
+        let data = r#"[general]
+        output = "/tmp/test"
         [[items]]
-        key = \"os.battery\"
+        key = "os.battery"
         interval = 60
-        command = \"acpi\"
-        ";
+        input.type = "command"
+        input.path = "acpi"
+        "#;
         // Testcase 1: output-dir supplied by config file only
         let config = conf::load(&mut data.as_bytes(), PathBuf::new()).unwrap();
         assert_eq!(config.general.output, PathBuf::from("/tmp/test"));
@@ -232,12 +238,13 @@ mod tests {
         assert_eq!(config.general.output, PathBuf::from("/tmp/cmd_test"));
 
         // Testcase 3: Not output given, default should be used
-        let data = "[general]
+        let data = r#"[general]
         [[items]]
-        key = \"os.battery\"
+        key = "os.battery"
         interval = 60
-        command = \"acpi\"
-        ";
+        input.type = "command"
+        input.path = "acpi"
+        "#;
         let config = conf::load(&mut data.as_bytes(), PathBuf::new()).unwrap();
         let xdg_default_dir = match xdg::BaseDirectories::with_prefix("antikoerper").unwrap()
             .create_data_directory(&PathBuf::new()) {
