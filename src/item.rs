@@ -114,14 +114,14 @@ mod tests {
             interval: 5,
             env: BTreeMap::new(),
             key: String::from("tests.one"),
-            kind: ItemKind::File(PathBuf::from("/dev/null")),
+            kind: ItemKind::File{ path: PathBuf::from("/dev/null") },
         });
         heap.push(Item {
             next_time: 3,
             interval: 5,
             env: BTreeMap::new(),
             key: String::from("tests.two"),
-            kind: ItemKind::File(PathBuf::from("/dev/null")),
+            kind: ItemKind::File{ path: PathBuf::from("/dev/null") },
         });
 
         if let Some(item) = heap.pop() {
