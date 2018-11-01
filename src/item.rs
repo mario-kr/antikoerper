@@ -54,6 +54,7 @@ pub enum ItemKind {
     /// Path to an executable with a list of arguments to be given to the executable
     Command {
         path: PathBuf,
+        #[serde(default)]
         args: Vec<String>
     },
     /// A string to be executed in a shell context
