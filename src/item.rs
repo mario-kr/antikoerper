@@ -105,6 +105,8 @@ mod tests {
     use std::collections::BinaryHeap;
     use std::collections::BTreeMap;
 
+    use toml;
+
     use item::{Item,ItemKind};
 
     #[test]
@@ -130,5 +132,85 @@ mod tests {
         } else {
             unreachable!();
         }
+    }
+
+    #[test]
+    fn deser_item() {
+        let item_str = r#"
+            key = "os.loadavg"
+            interval = 10
+            input.type = "file"
+            input.path = "/proc/loadavg"
+        "#;
+        let item_deser : Result<Item, _> = toml::from_str(item_str);
+        assert!(item_deser.is_ok());
+        let item = item_deser.unwrap();
+        assert_eq!(item.key, "os.loadavg");
+        assert_eq!(item.interval, 10);
+    }
+
+    #[test]
+    fn deser_itemkind_file() {
+        let item_str = r#"
+            key = "os.loadavg"
+            interval = 10
+            input.type = "file"
+            input.path = "/proc/loadavg"
+        "#;
+        let item_deser : Result<Item, _> = toml::from_str(item_str);
+        assert!(item_deser.is_ok());
+        let item = item_deser.unwrap();
+        assert_eq!(item.kind, ItemKind::File{ path: PathBuf::from("/proc/loadavg") });
+    }
+
+    #[test]
+    fn deser_itemkind_shell() {
+        let item_str = r#"
+            key = "os.loadavg"
+            interval = 10
+            input.type = "shell"
+            input.script = "df /var | tail -1"
+        "#;
+        let item_deser : Result<Item, _> = toml::from_str(item_str);
+        assert!(item_deser.is_ok());
+        let item = item_deser.unwrap();
+        assert_eq!(item.kind, ItemKind::Shell{
+            script: String::from("df /var | tail -1")
+        });
+    }
+
+    #[test]
+    fn deser_itemkind_command_without_args() {
+        let item_str = r#"
+            key = "os.battery"
+            interval = 60
+            input.type = "command"
+            input.path = "acpi"
+        "#;
+        let item_deser : Result<Item, _> = toml::from_str(item_str);
+        assert!(item_deser.is_ok());
+        let item = item_deser.unwrap();
+        assert_eq!(item.kind, ItemKind::Command{
+            path: PathBuf::from("acpi"),
+            args: Vec::new()
+        });
+    }
+
+    #[test]
+    fn deser_itemkind_command_with_args() {
+        let item_str = r#"
+            key = "os.battery"
+            interval = 60
+            input.type = "command"
+            input.path = "acpi"
+            input.args = [ "-b", "-i" ]
+        "#;
+        let item_deser : Result<Item, _> = toml::from_str(item_str);
+        assert!(item_deser.is_ok());
+        let item = item_deser.unwrap();
+        assert_eq!(item.kind, ItemKind::Command{
+            path: PathBuf::from("acpi"),
+            args: vec![String::from("-b"), String::from("-i")]
+        });
     }
 }
