@@ -79,17 +79,26 @@ pub struct Item {
     #[serde(rename = "input")]
     pub kind: ItemKind,
 
-    #[serde(default = "Vec::new")]
-    pub mappers: Vec<Mapper>,
+    #[serde(default)]
+    pub digest: DigestKind,
 }
 
 #[derive(Debug, Clone, Deserialize)]
-pub enum Mapper {
+#[serde(tag = "type", rename_all = "lowercase")]
+pub enum DigestKind {
     Regex {
         #[serde(with = "serde_regex")]
         regex: ::regex::Regex,
     },
+    #[serde(rename = "none")]
+    Raw,
     // Maybe later more?
+}
+
+impl Default for DigestKind {
+    fn default() -> DigestKind {
+        DigestKind::Raw
+    }
 }
 
 fn next_time_default() -> i64 {
@@ -107,7 +116,6 @@ impl PartialEq for Item {
 }
 
 impl Eq for Item {}
-
 
 impl PartialOrd for Item {
     fn partial_cmp(&self, other: &Self) -> Option<::std::cmp::Ordering> {
@@ -135,7 +143,7 @@ mod tests {
 
     use toml;
 
-    use item::{Item,ItemKind};
+    use item::{Item, ItemKind, DigestKind};
 
     #[test]
     fn items_ordered_by_smallest_time_first() {
@@ -146,7 +154,7 @@ mod tests {
             env: BTreeMap::new(),
             key: String::from("tests.one"),
             kind: ItemKind::File{ path: PathBuf::from("/dev/null") },
-            mappers: vec![],
+            digest: DigestKind::Raw,
         });
         heap.push(Item {
             next_time: 3,
@@ -154,7 +162,7 @@ mod tests {
             env: BTreeMap::new(),
             key: String::from("tests.two"),
             kind: ItemKind::File{ path: PathBuf::from("/dev/null") },
-            mappers: vec![],
+            digest: DigestKind::Raw,
         });
 
         if let Some(item) = heap.pop() {
