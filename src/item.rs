@@ -46,7 +46,7 @@ impl ::std::fmt::Display for ItemError {
 }
 
 /// The different kinds of items one can supervise
-#[derive(Debug, Clone, Eq, PartialEq, PartialOrd, Deserialize)]
+#[derive(Debug, Clone, Eq, PartialEq, Deserialize)]
 #[serde(tag = "type", rename_all = "lowercase")]
 pub enum ItemKind {
     /// Read the file at the given location, useful on Linux for the /sys dir for example
@@ -66,7 +66,7 @@ pub enum ItemKind {
 }
 
 /// A single item, knowing when it is supposed to run next, what should be done and its key.
-#[derive(Debug, Clone, Eq, PartialEq, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct Item {
     #[serde(skip, default = "next_time_default")]
     pub next_time: i64,
@@ -83,7 +83,7 @@ pub struct Item {
     pub mappers: Vec<Mapper>,
 }
 
-#[derive(Debug, Clone, Eq, PartialEq, PartialOrd, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 pub enum Mapper {
     Regex {
         #[serde(with = "serde_regex")]
@@ -95,6 +95,19 @@ pub enum Mapper {
 fn next_time_default() -> i64 {
     0
 }
+
+impl PartialEq for Item {
+    fn eq(&self, other: &Item) -> bool {
+        self.next_time == other.next_time
+            && self.interval == other.interval
+            && self.key == other.key
+            && self.env == other.env
+            && self.kind == other.kind
+    }
+}
+
+impl Eq for Item {}
+
 
 impl PartialOrd for Item {
     fn partial_cmp(&self, other: &Self) -> Option<::std::cmp::Ordering> {
