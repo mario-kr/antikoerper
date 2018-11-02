@@ -146,6 +146,7 @@ mod tests {
             env: BTreeMap::new(),
             key: String::from("tests.one"),
             kind: ItemKind::File{ path: PathBuf::from("/dev/null") },
+            mappers: vec![],
         });
         heap.push(Item {
             next_time: 3,
@@ -153,6 +154,7 @@ mod tests {
             env: BTreeMap::new(),
             key: String::from("tests.two"),
             kind: ItemKind::File{ path: PathBuf::from("/dev/null") },
+            mappers: vec![],
         });
 
         if let Some(item) = heap.pop() {
