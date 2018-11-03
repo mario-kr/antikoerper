@@ -37,7 +37,7 @@ pub trait AKOutput {
     fn clean_up(&mut self) -> Result<(), OutputError>;
 }
 
-#[derive(Debug, Clone, Eq, PartialEq, Deserialize)]
+#[derive(Debug, Clone, Eq, PartialEq, Default, Deserialize)]
 pub struct FileOutput {
     #[serde(default = "file_base_path_default")]
     pub base_path: PathBuf,

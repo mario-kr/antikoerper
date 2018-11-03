@@ -31,6 +31,8 @@ mod item;
 mod output;
 mod app;
 
+use output::AKOutput;
+
 fn main() {
     let matches = App::new("Antikörper")
                     .version(env!("CARGO_PKG_VERSION"))
@@ -42,12 +44,6 @@ fn main() {
                          .long("config")
                          .value_name("FILE")
                          .help("Sets a custom config file")
-                         .takes_value(true))
-                    .arg(Arg::with_name("output")
-                         .short("o")
-                         .long("output")
-                         .value_name("DIRECTORY")
-                         .help("Set the output path")
                          .takes_value(true))
                     .arg(Arg::with_name("daemonize")
                          .short("d")
@@ -93,12 +89,6 @@ on what should be in that file.");
         }
     };
 
-    trace!("Matching for output value");
-    let data_path = match matches.value_of("output") {
-        Some(s) => PathBuf::from(s),
-        None => PathBuf::new(),
-    };
-
     if matches.is_present("daemonize") {
 
         let mut child = process::Command::new(std::env::args().next().unwrap());
@@ -126,11 +116,23 @@ on what should be in that file.");
         }
     };
 
-    let config = match conf::load(&mut config_file, data_path) {
+    let config = match conf::load(&mut config_file) {
         Ok(c) => c,
         Err(e) => return println!("Error at loading config file ({}): \n{}",
                                   config_path.display() , e),
     };
+
+    // run prepare() for every given output
+    for mut output in config.output.clone() {
+        match output.prepare() {
+            Ok(_) => (),
+            Err(e) => {
+                error!("Error while preparing an output: {}", e);
+                error!("Aborting start up");
+                ::std::process::exit(1);
+            }
+        };
+    }
 
     app::start(config);
 
