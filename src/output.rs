@@ -37,7 +37,7 @@ pub trait AKOutput {
     fn clean_up(&mut self) -> Result<(), OutputError>;
 }
 
-#[derive(Debug, Clone, Eq, PartialEq, Default, Deserialize)]
+#[derive(Debug, Clone, Eq, PartialEq, Deserialize)]
 pub struct FileOutput {
     #[serde(default = "file_base_path_default")]
     pub base_path: PathBuf,
@@ -57,6 +57,15 @@ fn file_base_path_default() -> PathBuf {
 
 fn file_always_raw_default() -> bool {
     false
+}
+
+impl Default for FileOutput {
+    fn default() -> FileOutput {
+        FileOutput {
+            base_path: file_base_path_default(),
+            always_write_raw: file_always_raw_default()
+        }
+    }
 }
 
 impl AKOutput for FileOutput {
