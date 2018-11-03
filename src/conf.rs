@@ -145,11 +145,14 @@ mod tests {
     use std::path::PathBuf;
 
     use conf;
+    use output::OutputKind;
 
     #[test]
     fn load() {
         let data = r#"[general]
-         output = "/tmp/test"
+         [[output]]
+         type = "file"
+         base_path = "/tmp/test"
 
          [[items]]
          key = "os.uptime"
@@ -164,14 +167,17 @@ mod tests {
          input.script = "cat /proc/loadavg | cut -d' ' -f1"
 "#;
 
-        let config = conf::load(&mut data.as_bytes(), PathBuf::from("")).unwrap();
+        let config = conf::load(&mut data.as_bytes()).unwrap();
         assert_eq!(config.items.len(), 2);
     }
 
     #[test]
     fn no_duplicates() {
         let data = r#"[general]
-         output = "/tmp/test"
+         [[output]]
+         type = "file"
+         base_path = "/tmp/test"
+
          [[items]]
          key = "os.uptime"
          interval = 60
@@ -185,7 +191,7 @@ mod tests {
          input.script = "cat /proc/loadavg | cut -d' ' -f1"
 "#;
 
-        let config = conf::load(&mut data.as_bytes(), PathBuf::from(""));
+        let config = conf::load(&mut data.as_bytes());
         assert!(config.is_err());
         match config {
             Err(conf::ConfigError{ kind: conf::ConfigErrorKind::DuplicateItem(n), ..}) => {
@@ -199,24 +205,7 @@ mod tests {
 
     #[test]
     fn output_dir() {
-        let data = r#"[general]
-        output = "/tmp/test"
-        [[items]]
-        key = "os.battery"
-        interval = 60
-        input.type = "command"
-        input.path = "acpi"
-        "#;
-        // Testcase 1: output-dir supplied by config file only
-        let config = conf::load(&mut data.as_bytes(), PathBuf::new()).unwrap();
-        assert_eq!(config.general.output, PathBuf::from("/tmp/test"));
-
-        // Testcase 2: output-dir supplied by config, but also with commandline-argument
-        // argument should override config
-        let config = conf::load(&mut data.as_bytes(), PathBuf::from("/tmp/cmd_test")).unwrap();
-        assert_eq!(config.general.output, PathBuf::from("/tmp/cmd_test"));
-
-        // Testcase 3: Not output given, default should be used
+        // No output given, default should be used
         let data = r#"[general]
         [[items]]
         key = "os.battery"
@@ -224,7 +213,7 @@ mod tests {
         input.type = "command"
         input.path = "acpi"
         "#;
-        let config = conf::load(&mut data.as_bytes(), PathBuf::new()).unwrap();
+        let mut config = conf::load(&mut data.as_bytes()).unwrap();
         let xdg_default_dir = match xdg::BaseDirectories::with_prefix("antikoerper").unwrap()
             .create_data_directory(&PathBuf::new()) {
                 Ok(s) => s,
@@ -233,7 +222,15 @@ mod tests {
                     return;
                 }
             };
-        assert_eq!(config.general.output, xdg_default_dir,
-                   "Expected {:?} to be {:?}", config.general.output, xdg_default_dir);
+        match config.output.pop().unwrap() {
+            OutputKind::File{ fo } => {
+                assert_eq!(fo.base_path, xdg_default_dir,
+                   "Expected {:?} to be {:?}", fo.base_path, xdg_default_dir)
+            },
+            _ => {
+                println!("Error: wrong OutputKind");
+                return;
+            }
+        };
     }
 }
