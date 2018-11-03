@@ -28,6 +28,7 @@ use clap::{Arg, App};
 
 mod conf;
 mod item;
+mod output;
 mod app;
 
 fn main() {
