@@ -37,7 +37,7 @@ pub trait AKOutput {
     fn clean_up(&mut self) -> Result<(), OutputError>;
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Eq, PartialEq, Deserialize)]
 pub struct FileOutput {
     #[serde(default = "file_base_path_default")]
     pub base_path: PathBuf,
@@ -122,3 +122,45 @@ impl AKOutput for FileOutput {
     }
 }
 
+#[derive(Debug, Clone, Eq, PartialEq, Deserialize)]
+#[serde(tag = "type", rename_all = "lowercase")]
+pub enum OutputKind {
+    File{
+        #[serde(flatten)]
+        fo : FileOutput
+    },
+    // more in the future
+}
+
+impl AKOutput for OutputKind {
+
+    fn prepare(&mut self) -> Result<(), OutputError> {
+        match self {
+            OutputKind::File{ fo } => fo.prepare(),
+        }
+    }
+
+    fn write_value(&mut self, key: &String, time: Duration, value: f64) -> Result<(), OutputError> {
+        match self {
+            OutputKind::File{ fo } => fo.write_value(key, time, value),
+        }
+    }
+
+    fn write_raw_value_as_fallback(&mut self, key: &String, time: Duration, value: &String) -> Result<(), OutputError> {
+        match self {
+            OutputKind::File{ fo } => fo.write_raw_value_as_fallback(key, time, value),
+        }
+    }
+
+    fn write_raw_value(&mut self, key: &String, time: Duration, value: &String) -> Result<(), OutputError> {
+        match self {
+            OutputKind::File{ fo } => fo.write_raw_value(key, time, value),
+        }
+    }
+
+    fn clean_up(&mut self) -> Result<(), OutputError> {
+        match self {
+            OutputKind::File{ fo } => fo.clean_up(),
+        }
+    }
+}
