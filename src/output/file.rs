@@ -11,7 +11,7 @@ use item::Item;
 use output::AKOutput;
 use output::error::*;
 
-#[derive(Debug, Clone, Eq, PartialEq, Deserialize)]
+#[derive(Debug, Clone, Eq, PartialEq, Default, Deserialize)]
 pub struct FileOutput {
     #[serde(default = "file_base_path_default")]
     pub base_path: PathBuf,
