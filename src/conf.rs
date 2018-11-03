@@ -1,13 +1,15 @@
 extern crate xdg;
 
 use std::io::Read;
-use std::path::PathBuf;
 
 use itertools::Itertools;
 
 use item::Item;
 use item::ItemError;
 use item::ItemErrorKind;
+
+use output::OutputKind;
+use output::FileOutput;
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 enum ConfigErrorKind {
@@ -75,6 +77,8 @@ impl From<ItemError> for ConfigError {
 #[derive(Debug, Clone, Deserialize)]
 pub struct Config {
     pub general: General,
+    #[serde(default = "output_default")]
+    pub output : Vec<OutputKind>,
     pub items: Vec<Item>,
 }
 
@@ -82,52 +86,27 @@ pub struct Config {
 pub struct General {
     #[serde(default = "shell_default")]
     pub shell  : String,
-
-    #[serde(default = "output_default")]
-    pub output : PathBuf,
 }
 
 fn shell_default() -> String {
     String::from("/usr/bin/sh")
 }
 
-fn output_default() -> PathBuf {
-    xdg::BaseDirectories::with_prefix("antikoerper")
-        .unwrap()
-        .create_data_directory(&PathBuf::new())
-        .unwrap_or_else(|e| {
-            println!("Error: {}", e);
-            ::std::process::exit(1)
-        })
+fn output_default() -> Vec<OutputKind> {
+    vec![OutputKind::File{ fo : FileOutput::default() }]
 }
 
-pub fn load(r: &mut Read, o: PathBuf) -> Result<Config, ConfigError> {
+pub fn load(r: &mut Read) -> Result<Config, ConfigError> {
     let content = {
         let mut buffer = String::new();
         r.read_to_string(&mut buffer)?;
         buffer
     };
 
-    let mut data: Config = ::toml::de::from_str(&content)
+    let data: Config = ::toml::de::from_str(&content)
         .map_err(ConfigError::from)?;
 
     debug!("{:#?}", data);
-
-    data.general.output = xdg::BaseDirectories::with_prefix("antikoerper")
-        .unwrap()
-        .create_data_directory(if o == PathBuf::new() {
-            data.general.output
-        } else {
-             // using the one provided with commandline argument
-             o
-        })
-        .map_err(|e| {
-            println!("Error while checking/creating path");
-            println!("Error: {}", e);
-            ConfigError { kind: ConfigErrorKind::IoError, cause: None }
-        })?;
-
-    trace!("Output path is: {:#?}", data.general.output);
 
     if let Some(err) = data.items
         .iter()

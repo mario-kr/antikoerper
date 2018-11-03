@@ -1,26 +1,29 @@
 
 use std::thread;
-use std::time::Duration;
-use std::fs::{File, OpenOptions};
+use std::time::{SystemTime, Duration};
+use std::fs::File;
 use std::process::Command;
-use std::io::{Read, Write};
-use std::collections::HashMap;
+use std::io::Read;
 use std::f64;
 
 use conf::Config;
 use time::get_time;
 use item::ItemKind;
 use item::DigestKind;
+use output::AKOutput;
 
 pub fn start(mut conf: Config) {
     // We would deamonize here if necessary
 
     loop {
         loop {
-            let cur_time = get_time().sec;
+            let cur_time = match SystemTime::now().duration_since(SystemTime::UNIX_EPOCH) {
+                Ok(n) => n,
+                Err(_) => panic!("SystemTime before UNIX EPOCH!"),
+            };
             conf.items.sort_unstable();
             if let Some(c) = conf.items.iter().peekable().peek() {
-                if c.next_time > cur_time {
+                if c.next_time > cur_time.as_secs() as i64 {
                     break;
                 }
             } else {
@@ -30,12 +33,12 @@ pub fn start(mut conf: Config) {
 
             let mut item = conf.items.remove(0);
             let clone = item.clone();
-            item.next_time = cur_time + item.interval;
+            item.next_time = cur_time.as_secs() as i64 + item.interval;
             conf.items.push(item);
 
-            let mut shell = String::new();
+            let outputs = conf.output.clone();
 
-            let mut output_folder = conf.general.output.clone();
+            let mut shell = String::new();
 
             if let ItemKind::Shell{script: _} = clone.kind {
                 shell = conf.general.shell.clone();
@@ -89,12 +92,37 @@ pub fn start(mut conf: Config) {
 
                 debug!("{}={}", clone.key, raw_result);
 
-                // digest the raw result if necessary
-                let mut result : HashMap<String, f64> = HashMap::new();
+                // digest?
                 match clone.digest {
+
+                    // no digest - use the fallback method
                     DigestKind::Raw => {
+                        for mut outp in outputs {
+                            match outp.write_raw_value_as_fallback(
+                                &format!("{}.raw", &clone.key),
+                                cur_time,
+                                &raw_result)
+                            {
+                                Ok(_) => (),
+                                Err(e) => error!("Failure writing to output: {}", e)
+                            };
+                        }
                     },
+
+                    // digest using regexes, and write the extracted values
                     DigestKind::Regex { regex } => {
+                        // if an output is configured that way, the raw_result will always be written
+                        for mut outp in outputs.clone() {
+                            match outp.write_raw_value(
+                                &format!("{}.raw", &clone.key),
+                                cur_time,
+                                &raw_result)
+                            {
+                                Ok(_) => (),
+                                Err(e) => error!("Failure writing to output: {}", e)
+                            };
+                        }
+
                         if let Some(captures) = regex.captures(raw_result.trim()) {
                             for cn in regex.capture_names() {
                                 if let Some(named_group) = cn {
@@ -102,7 +130,16 @@ pub fn start(mut conf: Config) {
                                         Ok(f) => f,
                                         Err(_) => f64::NAN
                                     };
-                                    result.insert(named_group.to_string(), value);
+                                    for mut outp in outputs.clone() {
+                                        match outp.write_value(
+                                            &format!("{}.{}", &clone.key, &named_group),
+                                            cur_time,
+                                            value)
+                                        {
+                                            Ok(_) => (),
+                                            Err(e) => error!("Failure writing to output: {}", e)
+                                        };
+                                    }
                                 }
                             }
                         } else {
@@ -110,40 +147,12 @@ pub fn start(mut conf: Config) {
                         }
                     },
                 }
-
-                // handle the raw_result extra
-                output_folder.push(format!("{}.raw", &clone.key));
-                match OpenOptions::new().write(true).append(true).create(true).open(&output_folder)
-                    .and_then(|mut file| {
-                        file.write(&format!("{} {}\n", cur_time, raw_result.trim()).as_bytes()[..])
-                    })
-                {
-                    Ok(_) => (),
-                    Err(e) => {
-                        error!("Error creating file {}, {}", output_folder.display(), e)
-                    }
-                }
-
-                // iterate the results of digesting the raw_result, and put them in separate files
-                for (k, v) in result {
-                    output_folder.set_file_name(format!("{}.{}", &clone.key, k));
-                    match OpenOptions::new().write(true).append(true).create(true).open(&output_folder)
-                        .and_then(|mut file| {
-                            file.write(&format!("{} {}\n", cur_time, v).as_bytes()[..])
-                        })
-                    {
-                        Ok(_) => (),
-                        Err(e) => {
-                            error!("Error creating file {}, {}", output_folder.display(), e)
-                        }
-                    }
-                }
             });
         }
-            conf.items.sort_unstable();
-            if let Some(c) = conf.items.iter().peekable().peek() {
-                thread::sleep(Duration::from_secs((c.next_time - get_time().sec) as u64));
-            }
+        conf.items.sort_unstable();
+        if let Some(c) = conf.items.iter().peekable().peek() {
+            thread::sleep(Duration::from_secs((c.next_time - get_time().sec) as u64));
         }
     }
+}
 
