@@ -6,6 +6,8 @@ use std::path::PathBuf;
 use std::string::String;
 use std::time::Duration;
 
+use item::Item;
+
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum OutputErrorKind {
     PrepareError(String),
@@ -30,7 +32,7 @@ impl ::std::fmt::Display for OutputError {
 }
 
 pub trait AKOutput {
-    fn prepare(&mut self) -> Result<(), OutputError>;
+    fn prepare(&mut self, items: &Vec<Item>) -> Result<(), OutputError>;
     fn write_value(&mut self, key: &String, time: Duration, value: f64) -> Result<(), OutputError>;
     fn write_raw_value(&mut self, key: &String, time: Duration, value: &String) -> Result<(), OutputError>;
     fn write_raw_value_as_fallback(&mut self, key: &String, time: Duration, value: &String) -> Result<(), OutputError>;
@@ -70,7 +72,7 @@ impl Default for FileOutput {
 
 impl AKOutput for FileOutput {
 
-    fn prepare(&mut self) -> Result<(), OutputError> {
+    fn prepare(&mut self, items: &Vec<Item>) -> Result<(), OutputError> {
         // TODO: crate base_path if necessary
         // TODO: check if base_path is writable
         Ok(())
@@ -143,9 +145,9 @@ pub enum OutputKind {
 
 impl AKOutput for OutputKind {
 
-    fn prepare(&mut self) -> Result<(), OutputError> {
+    fn prepare(&mut self, items: &Vec<Item>) -> Result<(), OutputError> {
         match self {
-            OutputKind::File{ fo } => fo.prepare(),
+            OutputKind::File{ fo } => fo.prepare(items),
         }
     }
 
