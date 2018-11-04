@@ -19,4 +19,6 @@ serde_regex  = "0.3"
 toml         = "0.4"
 itertools    = "0.7"
 regex        = "1"
-influent     = "0.5"
+futures      = "0.1.25"
+tokio        = "0.1"
+influent     = { git = "https://github.com/mario-kr/influent.rs.git", branch = "str-string" }
