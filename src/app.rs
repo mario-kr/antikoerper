@@ -28,7 +28,7 @@ pub fn start(mut conf: Config) {
             }
 
 
-            let mut item = conf.items.pop().unwrap();
+            let mut item = conf.items.remove(0);
             let clone = item.clone();
             item.next_time = cur_time + item.interval;
             conf.items.push(item);
