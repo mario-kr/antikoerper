@@ -125,13 +125,8 @@ impl PartialOrd for Item {
 
 impl Ord for Item {
     fn cmp(&self, other: &Self) -> ::std::cmp::Ordering {
-        if self.next_time < other.next_time {
-            ::std::cmp::Ordering::Greater
-        } else if self.next_time == other.next_time {
-            ::std::cmp::Ordering::Equal
-        } else {
-            ::std::cmp::Ordering::Less
-        }
+        // reverse sort on next_time
+        other.next_time.cmp(&self.next_time)
     }
 }
 
