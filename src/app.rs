@@ -99,15 +99,31 @@ pub fn start(mut conf: Config) {
 
                     // no digest - use the fallback method
                     DigestKind::Raw => {
-                        for mut outp in outputs {
-                            match outp.write_raw_value_as_fallback(
-                                &format!("{}.raw", &clone.key),
-                                cur_time,
-                                &raw_result)
-                            {
-                                Ok(_) => (),
-                                Err(e) => error!("Failure writing to output: {}", e)
-                            };
+                        match raw_result.trim().parse::<f64>() {
+                            Ok(v) => {
+                                for mut outp in outputs {
+                                    match outp.write_value(
+                                        &format!("{}.parsed", &clone.key),
+                                        cur_time,
+                                        v)
+                                    {
+                                        Ok(_) => (),
+                                        Err(e) => error!("Failure writing to output: {}", e)
+                                    };
+                                }
+                            },
+                            Err(_) => {
+                                for mut outp in outputs {
+                                    match outp.write_raw_value_as_fallback(
+                                        &format!("{}.raw", &clone.key),
+                                        cur_time,
+                                        &raw_result)
+                                    {
+                                        Ok(_) => (),
+                                        Err(e) => error!("Failure writing to output: {}", e)
+                                    };
+                                }
+                            },
                         }
                     },
 
