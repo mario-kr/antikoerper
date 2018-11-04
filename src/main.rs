@@ -124,7 +124,7 @@ on what should be in that file.");
 
     // run prepare() for every given output
     for mut output in config.output.clone() {
-        match output.prepare() {
+        match output.prepare(&config.items) {
             Ok(_) => (),
             Err(e) => {
                 error!("Error while preparing an output: {}", e);
@@ -134,7 +134,7 @@ on what should be in that file.");
         };
     }
 
-    app::start(config);
+    app::start(config.clone());
 
     // run clean_up() for every given output
     for mut output in config.output.clone() {
