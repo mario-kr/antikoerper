@@ -9,7 +9,7 @@ use item::ItemError;
 use item::ItemErrorKind;
 
 use output::OutputKind;
-use output::FileOutput;
+use output::file::FileOutput;
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 enum ConfigErrorKind {
