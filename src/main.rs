@@ -136,4 +136,15 @@ on what should be in that file.");
 
     app::start(config);
 
+    // run clean_up() for every given output
+    for mut output in config.output.clone() {
+        match output.clean_up() {
+            Ok(_) => (),
+            Err(e) => {
+                error!("Error while preparing an output: {}", e);
+                error!("Aborting start up");
+                ::std::process::exit(1);
+            }
+        };
+    }
 }
