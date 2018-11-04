@@ -138,7 +138,6 @@ impl Ord for Item {
 #[cfg(test)]
 mod tests {
     use std::path::PathBuf;
-    use std::collections::BinaryHeap;
     use std::collections::BTreeMap;
 
     use toml;
@@ -147,7 +146,7 @@ mod tests {
 
     #[test]
     fn items_ordered_by_smallest_time_first() {
-        let mut heap = BinaryHeap::new();
+        let mut heap = Vec::new();
         heap.push(Item {
             next_time: 5,
             interval: 5,
