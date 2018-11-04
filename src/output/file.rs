@@ -44,7 +44,7 @@ impl Default for FileOutput {
 
 impl AKOutput for FileOutput {
 
-    fn prepare(&mut self, items: &Vec<Item>) -> Result<(), OutputError> {
+    fn prepare(&mut self, _items: &Vec<Item>) -> Result<(), OutputError> {
         // TODO: crate base_path if necessary
         // TODO: check if base_path is writable
         Ok(())

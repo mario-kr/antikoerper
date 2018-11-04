@@ -18,6 +18,9 @@ extern crate time;
 extern crate itertools;
 extern crate regex;
 extern crate serde_regex;
+extern crate futures;
+extern crate tokio;
+extern crate influent;
 
 use std::fs::File;
 use std::path::PathBuf;
@@ -116,35 +119,44 @@ on what should be in that file.");
         }
     };
 
-    let config = match conf::load(&mut config_file) {
+    let mut config = match conf::load(&mut config_file) {
         Ok(c) => c,
         Err(e) => return println!("Error at loading config file ({}): \n{}",
                                   config_path.display() , e),
     };
 
+    let mut outputs = config.output.clone();
     // run prepare() for every given output
-    for mut output in config.output.clone() {
-        match output.prepare(&config.items) {
-            Ok(_) => (),
-            Err(e) => {
-                error!("Error while preparing an output: {}", e);
-                error!("Aborting start up");
-                ::std::process::exit(1);
-            }
-        };
-    }
+    config.output = outputs.clone()
+        .iter_mut()
+        .map(|op| {
+            match op.prepare(&config.items) {
+                Ok(_) => {},
+                Err(e) => {
+                    error!("Error while preparing an output: {}", e);
+                    error!("Abort start-up");
+                    ::std::process::exit(1);
+                }
+            };
+            op
+        })
+        .map(|o| o.clone())
+        .collect();
 
-    app::start(config.clone());
+    app::start(config);
 
     // run clean_up() for every given output
-    for mut output in config.output.clone() {
-        match output.clean_up() {
-            Ok(_) => (),
-            Err(e) => {
-                error!("Error while preparing an output: {}", e);
-                error!("Aborting start up");
-                ::std::process::exit(1);
-            }
-        };
-    }
+    outputs
+        .iter_mut()
+        .map(|op| {
+            match op.clean_up() {
+                Ok(_) => {},
+                Err(e) => {
+                    error!("Error while cleaning up an output: {}", e);
+                }
+            };
+            op
+        })
+        .map(|o| o.clone())
+        .count();
 }
