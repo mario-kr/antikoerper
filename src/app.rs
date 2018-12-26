@@ -19,68 +19,52 @@ use item::DigestKind;
 use output::OutputKind;
 use output::AKOutput;
 
+/// Does whatever is specified in the configured item to get information/output
+/// returns Result::Err if this fails in any way
 fn produce_value(i : &Item, shell: &String) -> Result<String, ()> {
 
     let mut raw_result = String::new();
     match i.kind {
         ItemKind::File{ref path} => {
-            let mut f = match File::open(path) {
-                Ok(f) => f,
-                Err(e) => {
+            let mut f = File::open(path)
+                .map_err(|e| {
                     error!("Could not open file: {}\n{}", path.display(), e);
-                    return Err(());
-                }
-            };
-            match f.read_to_string(&mut raw_result) {
-                Ok(_) => (),
-                Err(e) => {
-                    error!("Could read output from file: {},\n{}", path.display(), e);
-                    return Err(());
-                }
-            }
+                })?;
+            f.read_to_string(&mut raw_result)
+                .map_err(|e| {
+                    error!("Could not read output from file: {},\n{}", path.display(), e);
+                })?;
         },
         ItemKind::Command{ref path, ref args} => {
             let mut output = Command::new(path);
             output.args(args);
-            for (k,v) in i.env.iter() {
+            for (k, v) in i.env.iter() {
                 output.env(k, v);
             }
-            let output = match output.output() {
-                Ok(f) => f,
-                Err(e) => {
+            let output = output.output()
+                .map_err(|e| {
                     error!("Could not run command: {}\n{}", path.display(), e);
-                    return Err(());
-                }
-            };
-            raw_result = match String::from_utf8(output.stdout) {
-                Ok(r) => r,
-                Err(e) => {
+                })?;
+            raw_result = String::from_utf8(output.stdout)
+                .map_err(|e| {
                     error!("Could not read output from command: {}\n{}", path.display(), e);
-                    return Err(());
-                }
-            }
+                })?;
         },
         ItemKind::Shell{ref script} => {
             let mut output = Command::new(&shell);
             output.arg("-c");
             output.arg(script);
-            for (k,v) in i.env.iter() {
+            for (k, v) in i.env.iter() {
                 output.env(k, v);
             }
-            let output = match output.output() {
-                Ok(f) => f,
-                Err(e) => {
+            let output = output.output()
+                .map_err(|e| {
                     error!("Could not run shell script: {}\n{}", script, e);
-                    return Err(());
-                }
-            };
-            raw_result = match String::from_utf8(output.stdout) {
-                Ok(r) => r,
-                Err(e) => {
+                })?;
+            raw_result = String::from_utf8(output.stdout)
+                .map_err(|e| {
                     error!("Could not read output from shell script: {}\n{}", script, e);
-                    return Err(());
-                }
-            }
+                })?;
         }
     }
     debug!("{}={}", i.key, raw_result);
@@ -88,30 +72,34 @@ fn produce_value(i : &Item, shell: &String) -> Result<String, ()> {
     Ok(raw_result)
 }
 
-fn digest_value(i: &Item, raw: String) -> Result<(String, HashMap<String, f64>), ()> {
+/// Digest a previously acquired raw value as specified in the item.
+/// This cannot fail; in the worst case, the HashMap remains empty, and
+/// only the raw, unparsed value may later be written to the outputs.
+fn digest_value(i: &Item, raw: String) -> (String, HashMap<String, f64>) {
 
     let mut values : HashMap<String, f64> = HashMap::new();
+    let raw = raw.trim();
 
     match i.digest {
 
         // no digest - use the fallback method
+        // errors when trying to parse a float from the given raw value are logged as debug
+        // having not-parsable output is a valid use-case for antikoerper
         DigestKind::Raw => {
-            match raw.trim().parse::<f64>() {
-                Ok(v) => values.insert(format!("{}.parsed", &i.key).into(), v),
-                Err(_) => None
-            };
+            let _ = raw.parse::<f64>()
+                .map(|v| values.insert(format!("{}.parsed", &i.key).into(), v))
+                .map_err(|_| debug!("Value could not be parsed as f64: {}", raw));
         },
 
         // digest using regexes, and write the extracted values
         DigestKind::Regex { ref regex } => {
 
-            if let Some(captures) = regex.captures(raw.trim()) {
+            if let Some(captures) = regex.captures(raw) {
                 for cn in regex.capture_names() {
                     if let Some(named_group) = cn {
-                        let value = match captures[named_group].parse::<f64>() {
-                            Ok(f) => f,
-                            Err(_) => f64::NAN
-                        };
+                        let value = captures[named_group]
+                            .parse::<f64>()
+                            .unwrap_or(f64::NAN);
                         values.insert(format!("{}.{}", &i.key, &named_group).into(), value);
                     }
                 }
@@ -222,9 +210,13 @@ fn digest_value(i: &Item, raw: String) -> Result<(String, HashMap<String, f64>),
             });
         }
     }
-    return Ok((raw, values));
+    (raw.to_string(), values)
 }
 
+/// Outputs the given values (raw as well as parsed ones) to the configured
+/// outputs.
+/// Every failure is logged, but the function is never aborted with an early
+/// return, as there might be several outputs, of which one might work.
 fn output_value(i: &Item, o: &Vec<OutputKind>, raw: String, values: HashMap<String, f64>)
     -> Result<(), ()>
 {
@@ -234,13 +226,11 @@ fn output_value(i: &Item, o: &Vec<OutputKind>, raw: String, values: HashMap<Stri
     };
 
     for mut outp in o.clone() {
-
         if values.len() == 0 {
             let _ = outp.write_raw_value_as_fallback(&format!("{}.raw", &i.key), cur_time, &raw)
                 .map_err(|e| error!("Failure writing to output: {}", e));
 
         } else {
-
             let _ = outp.write_raw_value(&format!("{}.raw", &i.key), cur_time, &raw)
                 .map_err(|e| error!("Failure writing to output: {}", e));
 
@@ -253,9 +243,9 @@ fn output_value(i: &Item, o: &Vec<OutputKind>, raw: String, values: HashMap<Stri
     Ok(())
 }
 
-
+/// Create and starts the tokio runtime, adding one forever repeating task for
+/// every configured item.
 pub fn start(conf: Config) {
-    // We would deamonize here if necessary
 
     // panics when failing to construct Runtime
     let mut runtime = Runtime::new().unwrap();
@@ -267,8 +257,8 @@ pub fn start(conf: Config) {
         let work_item = Interval::new(Instant::now(), Duration::from_secs(i_clone.interval as u64))
             .for_each(move |_| {
                 produce_value(&i_clone, &shell)
-                    .and_then(|raw_value| digest_value(&i_clone, raw_value))
-                    .and_then(|(raw, extracted)| output_value(&i_clone, &outputs, raw, extracted))
+                    .and_then(|raw_value| Ok(digest_value(&i_clone, raw_value)))
+                    .and_then(|(raw, v)| output_value(&i_clone, &outputs, raw, v))
                     .map_err(|_| tokio::timer::Error::shutdown())
             })
             .map_err(|_| ());
