@@ -105,7 +105,7 @@ impl AKOutput for InfluxOutput {
         m.set_timestamp(time.as_secs() as i64 * 1000000000 + time.subsec_nanos() as i64);
         m.add_field("value", Value::Float(value));
         if let Some(ref client) = self.client {
-            tokio::run(client
+            tokio::spawn(client
                        .lock()
                        .unwrap()
                        .write_one(m, Some(Precision::Nanoseconds))
@@ -127,7 +127,7 @@ impl AKOutput for InfluxOutput {
             m.set_timestamp(time.as_secs() as i64 * 1000000000 + time.subsec_nanos() as i64);
             m.add_field("value", Value::String(value));
             if let Some(ref client) = self.client {
-                tokio::run(client
+                tokio::spawn(client
                            .lock()
                            .unwrap()
                            .write_one(m, Some(Precision::Nanoseconds))
@@ -152,7 +152,7 @@ impl AKOutput for InfluxOutput {
             m.set_timestamp(time.as_secs() as i64 * 1000000000 + time.subsec_nanos() as i64);
             m.add_field("value", Value::String(value));
             if let Some(ref client) = self.client {
-                tokio::run(client
+                tokio::spawn(client
                            .lock()
                            .unwrap()
                            .write_one(m, Some(Precision::Nanoseconds))
