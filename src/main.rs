@@ -130,17 +130,15 @@ on what should be in that file.");
     config.output = outputs.clone()
         .iter_mut()
         .map(|op| {
-            match op.prepare(&config.items) {
-                Ok(_) => {},
-                Err(e) => {
+            op.prepare(&config.items)
+                .map_err(|e| {
                     error!("Error while preparing an output: {}", e);
                     error!("Abort start-up");
                     ::std::process::exit(1);
-                }
-            };
-            op
+                })
+            .unwrap();
+            op.clone()
         })
-        .map(|o| o.clone())
         .collect();
 
     app::start(config);
@@ -148,15 +146,9 @@ on what should be in that file.");
     // run clean_up() for every given output
     outputs
         .iter_mut()
-        .map(|op| {
-            match op.clean_up() {
-                Ok(_) => {},
-                Err(e) => {
-                    error!("Error while cleaning up an output: {}", e);
-                }
-            };
-            op
-        })
-        .map(|o| o.clone())
-        .count();
+        .for_each(|op| {
+            op.clean_up()
+                .map_err(|e| error!("Error while cleaning up an output: {}", e))
+                .unwrap_or(())
+        });
 }
