@@ -1,7 +1,9 @@
 
 use std::collections::HashMap;
+use std::collections::BTreeMap;
 use std::time::{SystemTime, Instant, Duration};
 use std::fs::File;
+use std::path::PathBuf;
 use std::process::Command;
 use std::io::Read;
 use std::f64;
@@ -23,6 +25,24 @@ use output::AKOutput;
 /// returns Result::Err if this fails in any way
 fn produce_value(i : &Item, shell: &String) -> Result<String, ()> {
 
+    fn run_cmd_capture_output(cmd: &PathBuf, args: &Vec<String>, env: &BTreeMap<String, String>)
+        -> Result<String, ()>
+    {
+        let mut command = Command::new(cmd);
+        command.args(args);
+        for (k, v) in env.iter() {
+            command.env(k, v);
+        }
+        let output = command.output()
+            .map_err(|e| {
+                error!("Could not run command: {}\n{}", cmd.display(), e);
+            })?;
+        Ok(String::from_utf8(output.stdout)
+            .map_err(|e| {
+                error!("Could not read output from command: {}\n{}", cmd.display(), e);
+            })?)
+    }
+
     let mut raw_result = String::new();
     match i.kind {
         ItemKind::File{ref path} => {
@@ -36,35 +56,14 @@ fn produce_value(i : &Item, shell: &String) -> Result<String, ()> {
                 })?;
         },
         ItemKind::Command{ref path, ref args} => {
-            let mut output = Command::new(path);
-            output.args(args);
-            for (k, v) in i.env.iter() {
-                output.env(k, v);
-            }
-            let output = output.output()
-                .map_err(|e| {
-                    error!("Could not run command: {}\n{}", path.display(), e);
-                })?;
-            raw_result = String::from_utf8(output.stdout)
-                .map_err(|e| {
-                    error!("Could not read output from command: {}\n{}", path.display(), e);
-                })?;
+            raw_result = run_cmd_capture_output(path, args, &i.env)?;
         },
         ItemKind::Shell{ref script} => {
-            let mut output = Command::new(&shell);
-            output.arg("-c");
-            output.arg(script);
-            for (k, v) in i.env.iter() {
-                output.env(k, v);
-            }
-            let output = output.output()
-                .map_err(|e| {
-                    error!("Could not run shell script: {}\n{}", script, e);
-                })?;
-            raw_result = String::from_utf8(output.stdout)
-                .map_err(|e| {
-                    error!("Could not read output from shell script: {}\n{}", script, e);
-                })?;
+            raw_result = run_cmd_capture_output(
+                &PathBuf::from(shell),
+                &vec![String::from("-c"), script.clone()],
+                &i.env
+            )?;
         }
     }
     debug!("{}={}", i.key, raw_result);
