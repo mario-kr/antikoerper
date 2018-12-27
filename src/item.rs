@@ -68,8 +68,6 @@ pub enum ItemKind {
 /// A single item, knowing when it is supposed to run next, what should be done and its key.
 #[derive(Debug, Clone, Deserialize)]
 pub struct Item {
-    #[serde(skip, default = "next_time_default")]
-    pub next_time: i64,
     pub interval: i64,
     pub key: String,
 
@@ -101,35 +99,6 @@ impl Default for DigestKind {
     }
 }
 
-fn next_time_default() -> i64 {
-    0
-}
-
-impl PartialEq for Item {
-    fn eq(&self, other: &Item) -> bool {
-        self.next_time == other.next_time
-            && self.interval == other.interval
-            && self.key == other.key
-            && self.env == other.env
-            && self.kind == other.kind
-    }
-}
-
-impl Eq for Item {}
-
-impl PartialOrd for Item {
-    fn partial_cmp(&self, other: &Self) -> Option<::std::cmp::Ordering> {
-        Some(self.cmp(other))
-    }
-}
-
-impl Ord for Item {
-    fn cmp(&self, other: &Self) -> ::std::cmp::Ordering {
-        // reverse sort on next_time
-        self.next_time.cmp(&other.next_time)
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use std::path::PathBuf;
@@ -138,33 +107,6 @@ mod tests {
     use toml;
 
     use item::{Item, ItemKind, DigestKind};
-
-    #[test]
-    fn items_ordered_by_smallest_time_first() {
-        let mut heap = Vec::new();
-        heap.push(Item {
-            next_time: 5,
-            interval: 5,
-            env: BTreeMap::new(),
-            key: String::from("tests.one"),
-            kind: ItemKind::File{ path: PathBuf::from("/dev/null") },
-            digest: DigestKind::Raw,
-        });
-        heap.push(Item {
-            next_time: 3,
-            interval: 5,
-            env: BTreeMap::new(),
-            key: String::from("tests.two"),
-            kind: ItemKind::File{ path: PathBuf::from("/dev/null") },
-            digest: DigestKind::Raw,
-        });
-
-        if let Some(item) = heap.pop() {
-            assert_eq!(item.key, "tests.two");
-        } else {
-            unreachable!();
-        }
-    }
 
     #[test]
     fn deser_item() {
