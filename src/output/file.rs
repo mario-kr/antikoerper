@@ -44,25 +44,24 @@ impl Default for FileOutput {
 
 impl AKOutput for FileOutput {
 
-    fn prepare(&mut self, _items: &Vec<Item>) -> Result<(), OutputError> {
+    fn prepare(&self, _items: &Vec<Item>) -> Result<Self, OutputError> {
         // TODO: crate base_path if necessary
         // TODO: check if base_path is writable
-        Ok(())
+        Ok(self.clone())
     }
 
-    fn write_value(&mut self, key: &String, time: Duration, value: f64) -> Result<(), OutputError> {
-        self.base_path.push(key);
-        match OpenOptions::new().write(true).append(true).create(true).open(&self.base_path)
+    fn write_value(&self, key: &String, time: Duration, value: f64) -> Result<(), OutputError> {
+        let mut path = self.base_path.clone();
+        path.push(key);
+        match OpenOptions::new().write(true).append(true).create(true).open(&path)
             .and_then(|mut file| {
                 file.write(&format!("{} {}\n", time.as_secs(), value).as_bytes()[..])
             })
         {
             Ok(_) => {
-                self.base_path.pop();
                 Ok(())
             },
             Err(e) => {
-                self.base_path.pop();
                 Err(OutputError {
                     kind: OutputErrorKind::WriteError(String::from("FileOutput")),
                     cause: Some(Box::new(e))
@@ -71,19 +70,18 @@ impl AKOutput for FileOutput {
         }
     }
 
-    fn write_raw_value_as_fallback(&mut self, key: &String, time: Duration, value: &String) -> Result<(), OutputError> {
-        self.base_path.push(key);
-        match OpenOptions::new().write(true).append(true).create(true).open(&self.base_path)
+    fn write_raw_value_as_fallback(&self, key: &String, time: Duration, value: &String) -> Result<(), OutputError> {
+        let mut path = self.base_path.clone();
+        path.push(key);
+        match OpenOptions::new().write(true).append(true).create(true).open(path)
             .and_then(|mut file| {
                 file.write(&format!("{} {}\n", time.as_secs(), value.trim()).as_bytes()[..])
             })
         {
             Ok(_) => {
-                self.base_path.pop();
                 Ok(())
             },
             Err(e) => {
-                self.base_path.pop();
                 Err(OutputError {
                     kind: OutputErrorKind::WriteError(String::from("FileOutput")),
                     cause: Some(Box::new(e))
@@ -92,7 +90,7 @@ impl AKOutput for FileOutput {
         }
     }
 
-    fn write_raw_value(&mut self, key: &String, time: Duration, value: &String) -> Result<(), OutputError> {
+    fn write_raw_value(&self, key: &String, time: Duration, value: &String) -> Result<(), OutputError> {
         if self.always_write_raw {
             self.write_raw_value_as_fallback(key, time, value)
         } else {
@@ -100,7 +98,7 @@ impl AKOutput for FileOutput {
         }
     }
 
-    fn clean_up(&mut self) -> Result<(), OutputError> {
+    fn clean_up(&self) -> Result<(), OutputError> {
         Ok(())
     }
 }

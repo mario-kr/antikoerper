@@ -86,20 +86,27 @@ impl From<ClientError> for OutputError {
 
 impl AKOutput for InfluxOutput {
 
-    fn prepare(&mut self, _items: &Vec<Item>) -> Result<(), OutputError> {
+    fn prepare(&self, _items: &Vec<Item>) -> Result<Self, OutputError> {
         trace!("running prepare for InfluxOutput");
-        self.client = Some(Arc::new(Mutex::new(create_client(
+        Ok(Self {
+            database : self.database.clone(),
+            username : self.username.clone(),
+            password : self.password.clone(),
+            hosts : self.hosts.clone(),
+            use_raw_as_fallback : self.use_raw_as_fallback,
+            always_write_raw : self.always_write_raw,
+            client : Some(Arc::new(Mutex::new(create_client(
                         Credentials {
                             username: self.username.clone(),
                             password: self.password.clone(),
                             database: self.database.clone(),
                         },
                         self.hosts.clone()
-                        ))));
-        Ok(())
+                        ))))
+        })
     }
 
-    fn write_value(&mut self, key: &String, time: Duration, value: f64) -> Result<(), OutputError> {
+    fn write_value(&self, key: &String, time: Duration, value: f64) -> Result<(), OutputError> {
         let mut m = Measurement::new(key);
         // Duration.as_nanos() is currently nightly only
         m.set_timestamp(time.as_secs() as i64 * 1000000000 + time.subsec_nanos() as i64);
@@ -120,7 +127,7 @@ impl AKOutput for InfluxOutput {
         Ok(())
     }
 
-    fn write_raw_value_as_fallback(&mut self, key: &String, time: Duration, value: &String) -> Result<(), OutputError> {
+    fn write_raw_value_as_fallback(&self, key: &String, time: Duration, value: &String) -> Result<(), OutputError> {
         if self.use_raw_as_fallback {
             let mut m = Measurement::new(key);
             // Duration.as_nanos() is currently nightly only
@@ -145,7 +152,7 @@ impl AKOutput for InfluxOutput {
         }
     }
 
-    fn write_raw_value(&mut self, key: &String, time: Duration, value: &String) -> Result<(), OutputError> {
+    fn write_raw_value(&self, key: &String, time: Duration, value: &String) -> Result<(), OutputError> {
         if self.always_write_raw {
             let mut m = Measurement::new(key);
             // Duration.as_nanos() is currently nightly only
@@ -170,7 +177,7 @@ impl AKOutput for InfluxOutput {
         }
     }
 
-    fn clean_up(&mut self) -> Result<(), OutputError> {
+    fn clean_up(&self) -> Result<(), OutputError> {
         Ok(())
     }
 }

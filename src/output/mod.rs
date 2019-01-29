@@ -13,11 +13,12 @@ pub mod error;
 use self::error::*;
 
 pub trait AKOutput {
-    fn prepare(&mut self, items: &Vec<Item>) -> Result<(), OutputError>;
-    fn write_value(&mut self, key: &String, time: Duration, value: f64) -> Result<(), OutputError>;
-    fn write_raw_value(&mut self, key: &String, time: Duration, value: &String) -> Result<(), OutputError>;
-    fn write_raw_value_as_fallback(&mut self, key: &String, time: Duration, value: &String) -> Result<(), OutputError>;
-    fn clean_up(&mut self) -> Result<(), OutputError>;
+    fn prepare(&self, items: &Vec<Item>) -> Result<Self, OutputError>
+        where Self: std::marker::Sized;
+    fn write_value(&self, key: &String, time: Duration, value: f64) -> Result<(), OutputError>;
+    fn write_raw_value(&self, key: &String, time: Duration, value: &String) -> Result<(), OutputError>;
+    fn write_raw_value_as_fallback(&self, key: &String, time: Duration, value: &String) -> Result<(), OutputError>;
+    fn clean_up(&self) -> Result<(), OutputError>;
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Deserialize)]
@@ -36,35 +37,35 @@ pub enum OutputKind {
 
 impl AKOutput for OutputKind {
 
-    fn prepare(&mut self, items: &Vec<Item>) -> Result<(), OutputError> {
+    fn prepare(&self, items: &Vec<Item>) -> Result<Self, OutputError> {
         match self {
-            OutputKind::File{ fo } => fo.prepare(items),
-            OutputKind::InfluxDB{ io } => io.prepare(items),
+            OutputKind::File{ fo } => fo.prepare(items).map(|o| OutputKind::File{ fo : o }),
+            OutputKind::InfluxDB{ io } => io.prepare(items).map(|o| OutputKind::InfluxDB{ io : o }),
         }
     }
 
-    fn write_value(&mut self, key: &String, time: Duration, value: f64) -> Result<(), OutputError> {
+    fn write_value(&self, key: &String, time: Duration, value: f64) -> Result<(), OutputError> {
         match self {
             OutputKind::File{ fo } => fo.write_value(key, time, value),
             OutputKind::InfluxDB{ io } => io.write_value(key, time, value),
         }
     }
 
-    fn write_raw_value_as_fallback(&mut self, key: &String, time: Duration, value: &String) -> Result<(), OutputError> {
+    fn write_raw_value_as_fallback(&self, key: &String, time: Duration, value: &String) -> Result<(), OutputError> {
         match self {
             OutputKind::File{ fo } => fo.write_raw_value_as_fallback(key, time, value),
             OutputKind::InfluxDB{ io } => io.write_raw_value_as_fallback(key, time, value),
         }
     }
 
-    fn write_raw_value(&mut self, key: &String, time: Duration, value: &String) -> Result<(), OutputError> {
+    fn write_raw_value(&self, key: &String, time: Duration, value: &String) -> Result<(), OutputError> {
         match self {
             OutputKind::File{ fo } => fo.write_raw_value(key, time, value),
             OutputKind::InfluxDB{ io } => io.write_raw_value(key, time, value),
         }
     }
 
-    fn clean_up(&mut self) -> Result<(), OutputError> {
+    fn clean_up(&self) -> Result<(), OutputError> {
         match self {
             OutputKind::File{ fo } => fo.clean_up(),
             OutputKind::InfluxDB{ io } => io.clean_up(),

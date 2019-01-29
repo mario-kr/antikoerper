@@ -3,7 +3,7 @@
         trivial_casts, trivial_numeric_casts,
         unsafe_code,
         unstable_features,
-        unused_import_braces, unused_qualifications)]
+        unused_import_braces)]
 
 //! Antikoerper is a simple and lightweight data aggregation and visualization tool
 
@@ -125,10 +125,10 @@ on what should be in that file.");
                                   config_path.display() , e),
     };
 
-    let mut outputs = config.output.clone();
+    let outputs = config.output.clone();
     // run prepare() for every given output
     config.output = outputs.clone()
-        .iter_mut()
+        .iter()
         .map(|op| {
             op.prepare(&config.items)
                 .map_err(|e| {
@@ -136,8 +136,7 @@ on what should be in that file.");
                     error!("Abort start-up");
                     ::std::process::exit(1);
                 })
-            .unwrap();
-            op.clone()
+            .unwrap()
         })
         .collect();
 
@@ -145,7 +144,7 @@ on what should be in that file.");
 
     // run clean_up() for every given output
     outputs
-        .iter_mut()
+        .iter()
         .for_each(|op| {
             op.clean_up()
                 .map_err(|e| error!("Error while cleaning up an output: {}", e))
