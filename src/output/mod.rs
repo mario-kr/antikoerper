@@ -16,8 +16,8 @@ pub trait AKOutput {
     fn prepare(&self, items: &Vec<Item>) -> Result<Self, OutputError>
         where Self: std::marker::Sized;
     fn write_value(&self, key: &String, time: Duration, value: f64) -> Result<(), OutputError>;
-    fn write_raw_value(&self, key: &String, time: Duration, value: &String) -> Result<(), OutputError>;
-    fn write_raw_value_as_fallback(&self, key: &String, time: Duration, value: &String) -> Result<(), OutputError>;
+    fn write_raw_value(&self, key: &String, time: Duration, value: &str) -> Result<(), OutputError>;
+    fn write_raw_value_as_fallback(&self, key: &String, time: Duration, value: &str) -> Result<(), OutputError>;
     fn clean_up(&self) -> Result<(), OutputError>;
 }
 
@@ -51,14 +51,14 @@ impl AKOutput for OutputKind {
         }
     }
 
-    fn write_raw_value_as_fallback(&self, key: &String, time: Duration, value: &String) -> Result<(), OutputError> {
+    fn write_raw_value_as_fallback(&self, key: &String, time: Duration, value: &str) -> Result<(), OutputError> {
         match self {
             OutputKind::File{ fo } => fo.write_raw_value_as_fallback(key, time, value),
             OutputKind::InfluxDB{ io } => io.write_raw_value_as_fallback(key, time, value),
         }
     }
 
-    fn write_raw_value(&self, key: &String, time: Duration, value: &String) -> Result<(), OutputError> {
+    fn write_raw_value(&self, key: &String, time: Duration, value: &str) -> Result<(), OutputError> {
         match self {
             OutputKind::File{ fo } => fo.write_raw_value(key, time, value),
             OutputKind::InfluxDB{ io } => io.write_raw_value(key, time, value),

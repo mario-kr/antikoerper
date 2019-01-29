@@ -100,7 +100,7 @@ on what should be in that file.");
         child.args(&args).stdin(process::Stdio::null()).stdout(process::Stdio::null()).stderr(process::Stdio::null());
         match child.spawn() {
             Ok(_) => debug!("Successfully daemonized"),
-            Err(e) => debug!("Failed daemonizing the process {:#?}", e),
+            Err(e) => error!("Failed daemonizing the process {:#?}", e),
         }
         return;
     }
@@ -112,7 +112,7 @@ on what should be in that file.");
         match file {
             Ok(f) => f,
             Err(e) => {
-                debug!("{}", e);
+                error!("{}", e);
                 println!("Could not open file '{}': {}", config_path.display(), e);
                 return;
             }
@@ -121,13 +121,12 @@ on what should be in that file.");
 
     let mut config = match conf::load(&mut config_file) {
         Ok(c) => c,
-        Err(e) => return println!("Error at loading config file ({}): \n{}",
+        Err(e) => return error!("Error at loading config file ({}): \n{}",
                                   config_path.display() , e),
     };
 
-    let outputs = config.output.clone();
     // run prepare() for every given output
-    config.output = outputs.clone()
+    config.output = config.output
         .iter()
         .map(|op| {
             op.prepare(&config.items)
@@ -140,10 +139,10 @@ on what should be in that file.");
         })
         .collect();
 
-    app::start(config);
+    app::start(config.clone());
 
     // run clean_up() for every given output
-    outputs
+    config.output
         .iter()
         .for_each(|op| {
             op.clean_up()

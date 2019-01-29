@@ -1,11 +1,10 @@
-use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 use futures::future::Future;
 use tokio;
 
 use influent::create_client;
-use influent::client::{Client, Credentials, ClientError, Precision};
+use influent::client::{http::HttpClient, Client, Credentials, ClientError, Precision};
 use influent::measurement::{Measurement, Value};
 
 use item::Item;
@@ -13,7 +12,7 @@ use item::Item;
 use output::AKOutput;
 use output::error::*;
 
-#[derive(Clone, Deserialize)]
+#[derive(Deserialize)]
 pub struct InfluxOutput {
     #[serde(default = "influx_database_default")]
     pub database: String,
@@ -26,7 +25,7 @@ pub struct InfluxOutput {
     #[serde(default = "influx_always_raw_default")]
     pub always_write_raw: bool,
     #[serde(skip, default = "influx_dummy_client_deser")]
-    pub client: Option<Arc<Mutex<Client + Send>>>,
+    pub client: Option<HttpClient>,
 }
 
 fn influx_database_default() -> String {
@@ -45,8 +44,34 @@ fn influx_always_raw_default() -> bool {
     false
 }
 
-fn influx_dummy_client_deser() -> Option<Arc<Mutex<Client + Send>>> {
+fn influx_dummy_client_deser() -> Option<HttpClient> {
     None
+}
+
+impl std::clone::Clone for InfluxOutput {
+    fn clone(&self) -> Self {
+        Self {
+            database : self.database.clone(),
+            username : self.username.clone(),
+            password : self.password.clone(),
+            hosts : self.hosts.clone(),
+            use_raw_as_fallback : self.use_raw_as_fallback,
+            always_write_raw : self.always_write_raw,
+            client : match self.client {
+                None => None,
+                Some(_) => {
+                    Some(create_client(
+                                Credentials {
+                                    username: self.username.clone(),
+                                    password: self.password.clone(),
+                                    database: self.database.clone(),
+                                },
+                                self.hosts.clone()
+                                ))
+                },
+            }
+        }
+    }
 }
 
 impl std::fmt::Debug for InfluxOutput {
@@ -95,14 +120,14 @@ impl AKOutput for InfluxOutput {
             hosts : self.hosts.clone(),
             use_raw_as_fallback : self.use_raw_as_fallback,
             always_write_raw : self.always_write_raw,
-            client : Some(Arc::new(Mutex::new(create_client(
-                        Credentials {
-                            username: self.username.clone(),
-                            password: self.password.clone(),
-                            database: self.database.clone(),
-                        },
-                        self.hosts.clone()
-                        ))))
+            client : Some(create_client(
+                    Credentials {
+                        username: self.username.clone(),
+                        password: self.password.clone(),
+                        database: self.database.clone(),
+                    },
+                    self.hosts.clone()
+                    ))
         })
     }
 
@@ -113,8 +138,6 @@ impl AKOutput for InfluxOutput {
         m.add_field("value", Value::Float(value));
         if let Some(ref client) = self.client {
             tokio::spawn(client
-                       .lock()
-                       .unwrap()
                        .write_one(m, Some(Precision::Nanoseconds))
                        .map_err(|e| println!("{:?}", e))
                       );
@@ -127,7 +150,7 @@ impl AKOutput for InfluxOutput {
         Ok(())
     }
 
-    fn write_raw_value_as_fallback(&self, key: &String, time: Duration, value: &String) -> Result<(), OutputError> {
+    fn write_raw_value_as_fallback(&self, key: &String, time: Duration, value: &str) -> Result<(), OutputError> {
         if self.use_raw_as_fallback {
             let mut m = Measurement::new(key);
             // Duration.as_nanos() is currently nightly only
@@ -135,8 +158,6 @@ impl AKOutput for InfluxOutput {
             m.add_field("value", Value::String(value));
             if let Some(ref client) = self.client {
                 tokio::spawn(client
-                           .lock()
-                           .unwrap()
                            .write_one(m, Some(Precision::Nanoseconds))
                            .map_err(|e| println!("{:?}", e))
                           );
@@ -152,7 +173,7 @@ impl AKOutput for InfluxOutput {
         }
     }
 
-    fn write_raw_value(&self, key: &String, time: Duration, value: &String) -> Result<(), OutputError> {
+    fn write_raw_value(&self, key: &String, time: Duration, value: &str) -> Result<(), OutputError> {
         if self.always_write_raw {
             let mut m = Measurement::new(key);
             // Duration.as_nanos() is currently nightly only
@@ -160,8 +181,6 @@ impl AKOutput for InfluxOutput {
             m.add_field("value", Value::String(value));
             if let Some(ref client) = self.client {
                 tokio::spawn(client
-                           .lock()
-                           .unwrap()
                            .write_one(m, Some(Precision::Nanoseconds))
                            .map_err(|e| println!("{:?}", e))
                           );

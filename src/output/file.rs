@@ -70,7 +70,7 @@ impl AKOutput for FileOutput {
         }
     }
 
-    fn write_raw_value_as_fallback(&self, key: &String, time: Duration, value: &String) -> Result<(), OutputError> {
+    fn write_raw_value_as_fallback(&self, key: &String, time: Duration, value: &str) -> Result<(), OutputError> {
         let mut path = self.base_path.clone();
         path.push(key);
         match OpenOptions::new().write(true).append(true).create(true).open(path)
@@ -90,7 +90,7 @@ impl AKOutput for FileOutput {
         }
     }
 
-    fn write_raw_value(&self, key: &String, time: Duration, value: &String) -> Result<(), OutputError> {
+    fn write_raw_value(&self, key: &String, time: Duration, value: &str) -> Result<(), OutputError> {
         if self.always_write_raw {
             self.write_raw_value_as_fallback(key, time, value)
         } else {
