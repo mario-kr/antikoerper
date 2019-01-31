@@ -1,3 +1,4 @@
+use std::sync::Arc;
 use std::time::Duration;
 
 use futures::future::Future;
@@ -12,7 +13,7 @@ use item::Item;
 use output::AKOutput;
 use output::error::*;
 
-#[derive(Deserialize)]
+#[derive(Clone, Deserialize)]
 pub struct InfluxOutput {
     #[serde(default = "influx_database_default")]
     pub database: String,
@@ -25,7 +26,7 @@ pub struct InfluxOutput {
     #[serde(default = "influx_always_raw_default")]
     pub always_write_raw: bool,
     #[serde(skip, default = "influx_dummy_client_deser")]
-    pub client: Option<HttpClient>,
+    pub client: Option<Arc<HttpClient>>,
 }
 
 fn influx_database_default() -> String {
@@ -44,34 +45,8 @@ fn influx_always_raw_default() -> bool {
     false
 }
 
-fn influx_dummy_client_deser() -> Option<HttpClient> {
+fn influx_dummy_client_deser() -> Option<Arc<HttpClient>> {
     None
-}
-
-impl std::clone::Clone for InfluxOutput {
-    fn clone(&self) -> Self {
-        Self {
-            database : self.database.clone(),
-            username : self.username.clone(),
-            password : self.password.clone(),
-            hosts : self.hosts.clone(),
-            use_raw_as_fallback : self.use_raw_as_fallback,
-            always_write_raw : self.always_write_raw,
-            client : match self.client {
-                None => None,
-                Some(_) => {
-                    Some(create_client(
-                                Credentials {
-                                    username: self.username.clone(),
-                                    password: self.password.clone(),
-                                    database: self.database.clone(),
-                                },
-                                self.hosts.clone()
-                                ))
-                },
-            }
-        }
-    }
 }
 
 impl std::fmt::Debug for InfluxOutput {
@@ -120,14 +95,14 @@ impl AKOutput for InfluxOutput {
             hosts : self.hosts.clone(),
             use_raw_as_fallback : self.use_raw_as_fallback,
             always_write_raw : self.always_write_raw,
-            client : Some(create_client(
+            client : Some(Arc::new(create_client(
                     Credentials {
                         username: self.username.clone(),
                         password: self.password.clone(),
                         database: self.database.clone(),
                     },
                     self.hosts.clone()
-                    ))
+                    )))
         })
     }
 
