@@ -156,8 +156,8 @@ mod tests {
 
     use std::path::PathBuf;
 
-    use conf;
-    use output::OutputKind;
+    use crate::conf;
+    use crate::output::OutputKind;
 
     #[test]
     fn load() {

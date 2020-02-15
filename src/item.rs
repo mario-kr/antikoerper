@@ -95,12 +95,11 @@ impl Default for DigestKind {
 
 #[cfg(test)]
 mod tests {
-    use std::collections::BTreeMap;
     use std::path::PathBuf;
 
     use toml;
 
-    use item::{DigestKind, Item, ItemKind};
+    use crate::item::{Item, ItemKind};
 
     #[test]
     fn deser_item() {
