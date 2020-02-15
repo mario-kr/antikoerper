@@ -8,10 +8,9 @@ use influent::create_client;
 use influent::client::{http::HttpClient, Client, Credentials, ClientError, Precision};
 use influent::measurement::{Measurement, Value};
 
-use item::Item;
+use crate::item::Item;
 
-use output::AKOutput;
-use output::error::*;
+use crate::output::{AKOutput, error::*};
 
 #[derive(Clone, Deserialize)]
 pub struct InfluxOutput {

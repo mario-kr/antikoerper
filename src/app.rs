@@ -14,10 +14,9 @@ use futures::Stream;
 use tokio::runtime::Runtime;
 use tokio::timer::Interval;
 
-use conf::Config;
-use item::ItemKind;
-use item::DigestKind;
-use output::AKOutput;
+use crate::conf::Config;
+use crate::item::{ItemKind, DigestKind};
+use crate::output::AKOutput;
 
 /// Does whatever is specified in the configured item to get information/output
 /// returns Result::Err if this fails in any way

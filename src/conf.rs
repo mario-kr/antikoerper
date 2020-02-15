@@ -1,15 +1,10 @@
 extern crate xdg;
 
 use std::io::Read;
-
 use itertools::Itertools;
 
-use item::Item;
-use item::ItemError;
-use item::ItemErrorKind;
-
-use output::OutputKind;
-use output::file::FileOutput;
+use crate::item::{Item, ItemError, ItemErrorKind};
+use crate::output::{OutputKind, file::FileOutput};
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 enum ConfigErrorKind {
