@@ -7,6 +7,8 @@ use std::io::{Read, Write};
 use std::collections::HashMap;
 use std::f64;
 
+use regex::Regex;
+
 use conf::Config;
 use time::get_time;
 use item::ItemKind;
@@ -136,6 +138,8 @@ pub fn start(mut conf: Config) {
                         Err(e) => {
                             error!("Error creating file {}, {}", output_folder.display(), e)
                         }
+
+                        Ok(Default::default())
                     }
                 }
             });
