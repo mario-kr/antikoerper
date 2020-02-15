@@ -93,6 +93,7 @@ pub enum DigestKind {
     // Maybe later more?
 }
 
+
 impl Default for DigestKind {
     fn default() -> DigestKind {
         DigestKind::Raw
