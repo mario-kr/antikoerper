@@ -3,7 +3,7 @@ extern crate xdg;
 use std::string::String;
 use std::time::Duration;
 
-use item::Item;
+use crate::item::Item;
 
 pub mod file;
 use self::file::FileOutput;

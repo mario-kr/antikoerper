@@ -13,10 +13,9 @@ use futures::Stream;
 use tokio::runtime::Runtime;
 use tokio::timer::Interval;
 
-use conf::Config;
-use item::ItemKind;
-use item::DigestKind;
-use output::AKOutput;
+use crate::conf::Config;
+use crate::item::{ItemKind, DigestKind};
+use crate::output::AKOutput;
 
 
 /// Create and starts the tokio runtime, adding one forever repeating task for

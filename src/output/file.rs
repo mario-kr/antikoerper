@@ -6,10 +6,9 @@ use std::path::PathBuf;
 use std::string::String;
 use std::time::Duration;
 
-use item::Item;
+use crate::item::Item;
 
-use output::AKOutput;
-use output::error::*;
+use crate::output::{AKOutput, error::*};
 
 #[derive(Debug, Clone, Eq, PartialEq, Deserialize)]
 pub struct FileOutput {
