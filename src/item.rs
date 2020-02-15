@@ -1,7 +1,6 @@
-
-use std::path::PathBuf;
-use std::error::Error;
 use std::collections::BTreeMap;
+use std::error::Error;
+use std::path::PathBuf;
 
 use serde_regex;
 
@@ -19,17 +18,16 @@ pub struct ItemError {
 impl ItemError {
     fn as_str(&self) -> &str {
         match self.kind {
-            ItemErrorKind::InvalidInterval      => "interval has to be bigger than 0 and smaller than MAX_INT64",
+            ItemErrorKind::InvalidInterval => {
+                "interval has to be bigger than 0 and smaller than MAX_INT64"
+            }
         }
     }
 }
 
 impl ItemError {
-    pub fn new(key: String ,k: ItemErrorKind) -> ItemError {
-        ItemError {
-            key: key,
-            kind: k,
-        }
+    pub fn new(key: String, k: ItemErrorKind) -> ItemError {
+        ItemError { key: key, kind: k }
     }
 }
 
@@ -50,19 +48,15 @@ impl ::std::fmt::Display for ItemError {
 #[serde(tag = "type", rename_all = "lowercase")]
 pub enum ItemKind {
     /// Read the file at the given location, useful on Linux for the /sys dir for example
-    File {
-        path: PathBuf
-    },
+    File { path: PathBuf },
     /// Path to an executable with a list of arguments to be given to the executable
     Command {
         path: PathBuf,
         #[serde(default)]
-        args: Vec<String>
+        args: Vec<String>,
     },
     /// A string to be executed in a shell context
-    Shell {
-        script: String
-    },
+    Shell { script: String },
 }
 
 /// A single item, knowing when it is supposed to run next, what should be done and its key.
@@ -101,12 +95,12 @@ impl Default for DigestKind {
 
 #[cfg(test)]
 mod tests {
-    use std::path::PathBuf;
     use std::collections::BTreeMap;
+    use std::path::PathBuf;
 
     use toml;
 
-    use item::{Item, ItemKind, DigestKind};
+    use item::{DigestKind, Item, ItemKind};
 
     #[test]
     fn deser_item() {
@@ -116,7 +110,7 @@ mod tests {
             input.type = "file"
             input.path = "/proc/loadavg"
         "#;
-        let item_deser : Result<Item, _> = toml::from_str(item_str);
+        let item_deser: Result<Item, _> = toml::from_str(item_str);
         assert!(item_deser.is_ok());
         let item = item_deser.unwrap();
         assert_eq!(item.key, "os.loadavg");
@@ -131,10 +125,15 @@ mod tests {
             input.type = "file"
             input.path = "/proc/loadavg"
         "#;
-        let item_deser : Result<Item, _> = toml::from_str(item_str);
+        let item_deser: Result<Item, _> = toml::from_str(item_str);
         assert!(item_deser.is_ok());
         let item = item_deser.unwrap();
-        assert_eq!(item.kind, ItemKind::File{ path: PathBuf::from("/proc/loadavg") });
+        assert_eq!(
+            item.kind,
+            ItemKind::File {
+                path: PathBuf::from("/proc/loadavg")
+            }
+        );
     }
 
     #[test]
@@ -145,12 +144,15 @@ mod tests {
             input.type = "shell"
             input.script = "df /var | tail -1"
         "#;
-        let item_deser : Result<Item, _> = toml::from_str(item_str);
+        let item_deser: Result<Item, _> = toml::from_str(item_str);
         assert!(item_deser.is_ok());
         let item = item_deser.unwrap();
-        assert_eq!(item.kind, ItemKind::Shell{
-            script: String::from("df /var | tail -1")
-        });
+        assert_eq!(
+            item.kind,
+            ItemKind::Shell {
+                script: String::from("df /var | tail -1")
+            }
+        );
     }
 
     #[test]
@@ -161,13 +163,16 @@ mod tests {
             input.type = "command"
             input.path = "acpi"
         "#;
-        let item_deser : Result<Item, _> = toml::from_str(item_str);
+        let item_deser: Result<Item, _> = toml::from_str(item_str);
         assert!(item_deser.is_ok());
         let item = item_deser.unwrap();
-        assert_eq!(item.kind, ItemKind::Command{
-            path: PathBuf::from("acpi"),
-            args: Vec::new()
-        });
+        assert_eq!(
+            item.kind,
+            ItemKind::Command {
+                path: PathBuf::from("acpi"),
+                args: Vec::new()
+            }
+        );
     }
 
     #[test]
@@ -179,12 +184,15 @@ mod tests {
             input.path = "acpi"
             input.args = [ "-b", "-i" ]
         "#;
-        let item_deser : Result<Item, _> = toml::from_str(item_str);
+        let item_deser: Result<Item, _> = toml::from_str(item_str);
         assert!(item_deser.is_ok());
         let item = item_deser.unwrap();
-        assert_eq!(item.kind, ItemKind::Command{
-            path: PathBuf::from("acpi"),
-            args: vec![String::from("-b"), String::from("-i")]
-        });
+        assert_eq!(
+            item.kind,
+            ItemKind::Command {
+                path: PathBuf::from("acpi"),
+                args: vec![String::from("-b"), String::from("-i")]
+            }
+        );
     }
 }

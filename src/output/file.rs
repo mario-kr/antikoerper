@@ -8,7 +8,7 @@ use std::time::Duration;
 
 use crate::item::Item;
 
-use crate::output::{AKOutput, error::*};
+use crate::output::{error::*, AKOutput};
 
 #[derive(Debug, Clone, Eq, PartialEq, Deserialize)]
 pub struct FileOutput {
@@ -36,13 +36,12 @@ impl Default for FileOutput {
     fn default() -> FileOutput {
         FileOutput {
             base_path: file_base_path_default(),
-            always_write_raw: file_always_raw_default()
+            always_write_raw: file_always_raw_default(),
         }
     }
 }
 
 impl AKOutput for FileOutput {
-
     fn prepare(&self, _items: &Vec<Item>) -> Result<Self, OutputError> {
         // TODO: crate base_path if necessary
         // TODO: check if base_path is writable
@@ -52,44 +51,52 @@ impl AKOutput for FileOutput {
     fn write_value(&self, key: &String, time: Duration, value: f64) -> Result<(), OutputError> {
         let mut path = self.base_path.clone();
         path.push(key);
-        match OpenOptions::new().write(true).append(true).create(true).open(&path)
+        match OpenOptions::new()
+            .write(true)
+            .append(true)
+            .create(true)
+            .open(&path)
             .and_then(|mut file| {
                 file.write(&format!("{} {}\n", time.as_secs(), value).as_bytes()[..])
-            })
-        {
-            Ok(_) => {
-                Ok(())
-            },
-            Err(e) => {
-                Err(OutputError {
-                    kind: OutputErrorKind::WriteError(String::from("FileOutput")),
-                    cause: Some(Box::new(e))
-                })
-            }
+            }) {
+            Ok(_) => Ok(()),
+            Err(e) => Err(OutputError {
+                kind: OutputErrorKind::WriteError(String::from("FileOutput")),
+                cause: Some(Box::new(e)),
+            }),
         }
     }
 
-    fn write_raw_value_as_fallback(&self, key: &String, time: Duration, value: &str) -> Result<(), OutputError> {
+    fn write_raw_value_as_fallback(
+        &self,
+        key: &String,
+        time: Duration,
+        value: &str,
+    ) -> Result<(), OutputError> {
         let mut path = self.base_path.clone();
         path.push(key);
-        match OpenOptions::new().write(true).append(true).create(true).open(path)
+        match OpenOptions::new()
+            .write(true)
+            .append(true)
+            .create(true)
+            .open(path)
             .and_then(|mut file| {
                 file.write(&format!("{} {}\n", time.as_secs(), value.trim()).as_bytes()[..])
-            })
-        {
-            Ok(_) => {
-                Ok(())
-            },
-            Err(e) => {
-                Err(OutputError {
-                    kind: OutputErrorKind::WriteError(String::from("FileOutput")),
-                    cause: Some(Box::new(e))
-                })
-            }
+            }) {
+            Ok(_) => Ok(()),
+            Err(e) => Err(OutputError {
+                kind: OutputErrorKind::WriteError(String::from("FileOutput")),
+                cause: Some(Box::new(e)),
+            }),
         }
     }
 
-    fn write_raw_value(&self, key: &String, time: Duration, value: &str) -> Result<(), OutputError> {
+    fn write_raw_value(
+        &self,
+        key: &String,
+        time: Duration,
+        value: &str,
+    ) -> Result<(), OutputError> {
         if self.always_write_raw {
             self.write_raw_value_as_fallback(key, time, value)
         } else {

@@ -1,10 +1,10 @@
 extern crate xdg;
 
-use std::io::Read;
 use itertools::Itertools;
+use std::io::Read;
 
 use crate::item::{Item, ItemError, ItemErrorKind};
-use crate::output::{OutputKind, file::FileOutput};
+use crate::output::{file::FileOutput, OutputKind};
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 enum ConfigErrorKind {
@@ -24,11 +24,12 @@ pub struct ConfigError {
 impl ::std::fmt::Display for ConfigError {
     fn fmt(&self, f: &mut ::std::fmt::Formatter) -> Result<(), ::std::fmt::Error> {
         match self.kind {
-            ConfigErrorKind::IoError
-                | ConfigErrorKind::TomlError => self.cause.as_ref().unwrap().fmt(f),
+            ConfigErrorKind::IoError | ConfigErrorKind::TomlError => {
+                self.cause.as_ref().unwrap().fmt(f)
+            }
             ConfigErrorKind::ErrorItems => write!(f, "some items have errors"),
             ConfigErrorKind::DuplicateItem(ref s) => write!(f, "duplicate key: {}", s),
-            ConfigErrorKind::Utf8Error => write!(f, "utf8 error")
+            ConfigErrorKind::Utf8Error => write!(f, "utf8 error"),
         }
     }
 }
@@ -73,14 +74,14 @@ impl From<ItemError> for ConfigError {
 pub struct Config {
     pub general: General,
     #[serde(default = "output_default")]
-    pub output : Vec<OutputKind>,
+    pub output: Vec<OutputKind>,
     pub items: Vec<Item>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct General {
     #[serde(default = "shell_default")]
-    pub shell  : String,
+    pub shell: String,
 }
 
 fn shell_default() -> String {
@@ -88,7 +89,9 @@ fn shell_default() -> String {
 }
 
 fn output_default() -> Vec<OutputKind> {
-    vec![OutputKind::File{ fo : FileOutput::default() }]
+    vec![OutputKind::File {
+        fo: FileOutput::default(),
+    }]
 }
 
 pub fn load(r: &mut dyn Read) -> Result<Config, ConfigError> {
@@ -98,36 +101,50 @@ pub fn load(r: &mut dyn Read) -> Result<Config, ConfigError> {
         buffer
     };
 
-    let data: Config = ::toml::de::from_str(&content)
-        .map_err(ConfigError::from)?;
+    let data: Config = ::toml::de::from_str(&content).map_err(ConfigError::from)?;
 
     debug!("{:#?}", data);
 
-    if let Some(err) = data.items
+    if let Some(err) = data
+        .items
         .iter()
         .map(|x| x.key.clone())
         .sorted()
         .windows(2)
-        .filter_map(|x| if x[0] == x[1] {
-            Some(x[0].clone())
-        } else {
-            None
+        .filter_map(|x| {
+            if x[0] == x[1] {
+                Some(x[0].clone())
+            } else {
+                None
+            }
         })
         .next()
-        .map(|n| Err(ConfigError { kind: ConfigErrorKind::DuplicateItem(n), cause: None }))
+        .map(|n| {
+            Err(ConfigError {
+                kind: ConfigErrorKind::DuplicateItem(n),
+                cause: None,
+            })
+        })
     {
-        return err
+        return err;
     }
 
-    if let Some(err) = data.items
+    if let Some(err) = data
+        .items
         .iter()
-        .filter_map(|i| if i.interval == 0 {
-            Some(Err(ItemError::new(i.key.clone(), ItemErrorKind::InvalidInterval)))
-        } else {
-            None
-        }).next()
+        .filter_map(|i| {
+            if i.interval == 0 {
+                Some(Err(ItemError::new(
+                    i.key.clone(),
+                    ItemErrorKind::InvalidInterval,
+                )))
+            } else {
+                None
+            }
+        })
+        .next()
     {
-        return err.map_err(ConfigError::from)
+        return err.map_err(ConfigError::from);
     }
 
     Ok(data)
@@ -189,12 +206,13 @@ mod tests {
         let config = conf::load(&mut data.as_bytes());
         assert!(config.is_err());
         match config {
-            Err(conf::ConfigError{ kind: conf::ConfigErrorKind::DuplicateItem(n), ..}) => {
+            Err(conf::ConfigError {
+                kind: conf::ConfigErrorKind::DuplicateItem(n),
+                ..
+            }) => {
                 assert_eq!(n, "os.uptime");
-            },
-            _ => {
-                panic!("Wrong Error!: {:?}", config)
             }
+            _ => panic!("Wrong Error!: {:?}", config),
         }
     }
 
@@ -209,19 +227,22 @@ mod tests {
         input.path = "acpi"
         "#;
         let mut config = conf::load(&mut data.as_bytes()).unwrap();
-        let xdg_default_dir = match xdg::BaseDirectories::with_prefix("antikoerper").unwrap()
-            .create_data_directory(&PathBuf::new()) {
-                Ok(s) => s,
-                Err(e) => {
-                    println!("Error: {}", e);
-                    return;
-                }
-            };
+        let xdg_default_dir = match xdg::BaseDirectories::with_prefix("antikoerper")
+            .unwrap()
+            .create_data_directory(&PathBuf::new())
+        {
+            Ok(s) => s,
+            Err(e) => {
+                println!("Error: {}", e);
+                return;
+            }
+        };
         match config.output.pop().unwrap() {
-            OutputKind::File{ fo } => {
-                assert_eq!(fo.base_path, xdg_default_dir,
-                   "Expected {:?} to be {:?}", fo.base_path, xdg_default_dir)
-            },
+            OutputKind::File { fo } => assert_eq!(
+                fo.base_path, xdg_default_dir,
+                "Expected {:?} to be {:?}",
+                fo.base_path, xdg_default_dir
+            ),
             _ => {
                 println!("Error: wrong OutputKind");
                 return;
