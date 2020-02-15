@@ -20,7 +20,7 @@ extern crate regex;
 extern crate serde_regex;
 extern crate futures;
 extern crate tokio;
-extern crate influent;
+extern crate influxdb;
 
 use std::fs::File;
 use std::path::PathBuf;

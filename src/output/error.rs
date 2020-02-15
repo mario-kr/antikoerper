@@ -9,7 +9,7 @@ pub enum OutputErrorKind {
 #[derive(Debug)]
 pub struct OutputError {
     pub kind: OutputErrorKind,
-    pub cause: Option<Box<::std::error::Error>>,
+    pub cause: Option<Box<dyn (::std::error::Error)>>,
 }
 
 impl ::std::fmt::Display for OutputError {

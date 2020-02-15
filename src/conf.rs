@@ -18,7 +18,7 @@ enum ConfigErrorKind {
 #[derive(Debug)]
 pub struct ConfigError {
     kind: ConfigErrorKind,
-    cause: Option<Box<::std::error::Error>>,
+    cause: Option<Box<dyn (::std::error::Error)>>,
 }
 
 impl ::std::fmt::Display for ConfigError {
@@ -91,7 +91,7 @@ fn output_default() -> Vec<OutputKind> {
     vec![OutputKind::File{ fo : FileOutput::default() }]
 }
 
-pub fn load(r: &mut Read) -> Result<Config, ConfigError> {
+pub fn load(r: &mut dyn Read) -> Result<Config, ConfigError> {
     let content = {
         let mut buffer = String::new();
         r.read_to_string(&mut buffer)?;
