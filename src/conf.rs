@@ -110,10 +110,10 @@ pub fn load(r: &mut dyn Read) -> Result<Config, ConfigError> {
         .iter()
         .map(|x| x.key.clone())
         .sorted()
-        .windows(2)
+        .tuple_windows::<(_, _)>()
         .filter_map(|x| {
-            if x[0] == x[1] {
-                Some(x[0].clone())
+            if x.0 == x.1 {
+                Some(x.0.clone())
             } else {
                 None
             }

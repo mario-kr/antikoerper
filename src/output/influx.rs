@@ -1,7 +1,7 @@
 use std::sync::Arc;
 use std::time::Duration;
 
-use influxdb::{Client, Query, Timestamp};
+use influxdb::{InfluxDbWriteable, Client, Timestamp};
 use tokio;
 
 use crate::item::Item;
@@ -93,18 +93,11 @@ impl AKOutput for InfluxOutput {
     fn write_value(&self, key: &str, time: Duration, value: f64) -> Result<(), OutputError> {
         if let Some(client) = &self.client {
             let c = client.clone();
-            let lkey = String::from(key);
+            let query = Timestamp::Milliseconds(time.as_millis())
+                            .into_query(key)
+                            .add_field("value", value);
             tokio::spawn(async move {
-                if let Err(e) = c
-                    .query(
-                        &Query::write_query(
-                            Timestamp::Milliseconds(time.as_millis() as usize),
-                            lkey,
-                        )
-                        .add_field("value", value),
-                    )
-                    .await
-                {
+                if let Err(e) = c.query(&query).await {
                     error!("failed to write to influxdb backend: {}", e);
                 }
             });
@@ -128,19 +121,11 @@ impl AKOutput for InfluxOutput {
         if self.use_raw_as_fallback {
             if let Some(client) = &self.client {
                 let c = client.clone();
-                let lkey = String::from(key);
-                let lval = String::from(value);
+                let query = Timestamp::Milliseconds(time.as_millis())
+                                .into_query(key)
+                                .add_field("value", value);
                 tokio::spawn(async move {
-                    if let Err(e) = c
-                        .query(
-                            &Query::write_query(
-                                Timestamp::Milliseconds(time.as_millis() as usize),
-                                lkey,
-                            )
-                            .add_field("value", lval),
-                        )
-                        .await
-                    {
+                    if let Err(e) = c.query(&query).await {
                         error!("failed to write to influxdb backend: {}", e);
                     }
                 });
@@ -167,19 +152,11 @@ impl AKOutput for InfluxOutput {
         if self.always_write_raw {
             if let Some(client) = &self.client {
                 let c = client.clone();
-                let lkey = String::from(key);
-                let lval = String::from(value);
+                let query = Timestamp::Milliseconds(time.as_millis())
+                                .into_query(key)
+                                .add_field("value", value);
                 tokio::spawn(async move {
-                    if let Err(e) = c
-                        .query(
-                            &Query::write_query(
-                                Timestamp::Milliseconds(time.as_millis() as usize),
-                                lkey,
-                            )
-                            .add_field("value", lval),
-                        )
-                        .await
-                    {
+                    if let Err(e) = c.query(&query).await {
                         error!("failed to write to influxdb backend: {}", e);
                     }
                 });

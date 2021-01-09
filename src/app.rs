@@ -17,7 +17,7 @@ use crate::output::{AKOutput, OutputKind};
 /// every configured item.
 pub fn start(conf: Config) {
     // panics when failing to construct Runtime
-    let mut runtime = Runtime::new().unwrap();
+    let runtime = Runtime::new().unwrap();
     let mut join_handles = vec![];
 
     for item in conf.items {

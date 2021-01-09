@@ -76,16 +76,16 @@ fn main() {
     let xdg_dirs = xdg::BaseDirectories::with_prefix("antikoerper").unwrap();
 
     let level = match matches.occurrences_of("v") {
-        0 => log::LogLevelFilter::Off,
-        1 => log::LogLevelFilter::Warn,
-        2 => log::LogLevelFilter::Debug,
-        3 | _ => log::LogLevelFilter::Trace,
+        0 => "error",
+        1 => "warn",
+        2 => "debug",
+        3 | _ => "trace",
     };
 
-    env_logger::LogBuilder::new()
-        .filter(None, level)
-        .init()
-        .unwrap();
+    env_logger::Builder::from_env(
+        env_logger::Env::default()
+        .default_filter_or(level))
+        .init();
 
     trace!("Matching for config value");
     let config_path = matches
